@@ -1,0 +1,660 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Backlyst Credit System Architecture</title>
+  <style>
+    :root {
+      --bg: #f7f4ec;
+      --paper: #fffdf8;
+      --ink: #1f2933;
+      --muted: #52606d;
+      --line: #d9d2c3;
+      --accent: #8a5a12;
+      --accent-soft: #f3e4c7;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      background: linear-gradient(180deg, #efe7d6 0%, var(--bg) 240px);
+      color: var(--ink);
+      font-family: Georgia, "Times New Roman", serif;
+      line-height: 1.55;
+    }
+
+    .page {
+      max-width: 1100px;
+      margin: 32px auto;
+      padding: 40px 44px 60px;
+      background: var(--paper);
+      border: 1px solid var(--line);
+      box-shadow: 0 16px 40px rgba(49, 36, 16, 0.08);
+    }
+
+    h1, h2, h3 {
+      color: #2f2416;
+      margin-top: 0;
+    }
+
+    h1 {
+      font-size: 34px;
+      margin-bottom: 8px;
+    }
+
+    h2 {
+      font-size: 24px;
+      margin-top: 34px;
+      border-bottom: 2px solid var(--accent-soft);
+      padding-bottom: 6px;
+    }
+
+    h3 {
+      font-size: 18px;
+      margin-top: 26px;
+      margin-bottom: 8px;
+    }
+
+    p, li {
+      font-size: 15px;
+    }
+
+    .lede {
+      color: var(--muted);
+      font-size: 16px;
+      margin-bottom: 22px;
+    }
+
+    .note {
+      padding: 14px 16px;
+      background: #fbf6ea;
+      border-left: 4px solid var(--accent);
+      margin: 18px 0;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 14px;
+    }
+
+    .card {
+      border: 1px solid var(--line);
+      background: #fffaf1;
+      padding: 14px 16px;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 14px 0 20px;
+      font-size: 14px;
+    }
+
+    th, td {
+      border: 1px solid var(--line);
+      padding: 8px 10px;
+      vertical-align: top;
+      text-align: left;
+    }
+
+    th {
+      background: #f4ead4;
+      color: #3f311f;
+    }
+
+    code {
+      background: #f6efe1;
+      padding: 1px 5px;
+      border-radius: 4px;
+      font-size: 0.95em;
+    }
+
+    .small {
+      font-size: 13px;
+      color: var(--muted);
+    }
+
+    ul {
+      padding-left: 20px;
+    }
+
+    @media print {
+      body {
+        background: white;
+      }
+
+      .page {
+        margin: 0;
+        max-width: none;
+        border: 0;
+        box-shadow: none;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main class="page">
+    <h1>Backlyst Credit System Architecture</h1>
+    <p class="lede">
+      Ei document ta current codebase onujayi Backlyst er credit system er full architecture,
+      schema, table relationship, business rule, ar current implementation behavior explain kore.
+    </p>
+
+    <div class="note">
+      <strong>Scope:</strong> Ei document e shudhu credit-related schema ar shared table er credit-relevant field gula include kora hoyeche.
+      Shared domain table jemon <code>User</code>, <code>Subscription</code>, <code>PlacementTask</code>, <code>Website</code> er full business field na diye credit-relevant part explain kora hoyeche.
+    </div>
+
+    <h2>1. System Overview</h2>
+    <p>
+      Credit system hocche ekta point wallet + task settlement + audit trail system. User task post korte credit spend kore,
+      provider task complete korle earned credit pete pare, ar sob movement audit hishebe <code>CreditLog</code> table e save hoy.
+    </p>
+
+    <div class="grid">
+      <section class="card">
+        <h3>Main Credit Sources</h3>
+        <ul>
+          <li><code>Subscription credits</code>: batch-wise store hoy, expire korte pare</li>
+          <li><code>Earned task credits</code>: provider earn kore, requester spend korte pare</li>
+          <li><code>Visibility credits</code>: schema te ache, current active flow e kom use hocche</li>
+        </ul>
+      </section>
+      <section class="card">
+        <h3>Main Credit Consumers</h3>
+        <ul>
+          <li>Requester task create/post flow</li>
+          <li>Task final settlement</li>
+          <li>Admin adjustment</li>
+          <li>Refund and reversal scenarios</li>
+        </ul>
+      </section>
+    </div>
+
+    <h2>2. Technical Dependencies</h2>
+    <ul>
+      <li><code>PrismaService</code> diye sob credit DB read/write hoy</li>
+      <li><code>CreditModule</code> app-level module hisebe register kora</li>
+      <li><code>AuthService</code> user create somoy wallet create kore</li>
+      <li><code>TaskRequesterService</code> task cost ar reserve amount calculate kore</li>
+      <li><code>ProviderTaskService</code> final credit settlement cost decide kore</li>
+      <li><code>CreditTaskService</code> actual deduct/refund/reward execute kore</li>
+      <li><code>CreditService</code> summary and statement provide kore</li>
+      <li><code>ReferrerService</code> referral progress read kore</li>
+    </ul>
+
+    <h2>3. Credit Enums</h2>
+
+    <h3>3.1 CreditType</h3>
+    <table>
+      <thead>
+        <tr>
+          <th>Value</th>
+          <th>Meaning</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><code>SUBSCRIPTION_TASK</code></td>
+          <td>Subscription plan theke paoa task credit</td>
+        </tr>
+        <tr>
+          <td><code>EARNED_TASK</code></td>
+          <td>Task complete kore earn kora credit</td>
+        </tr>
+        <tr>
+          <td><code>VISIBILITY</code></td>
+          <td>Visibility-based credit bucket</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <h3>3.2 CreditAction</h3>
+    <table>
+      <thead>
+        <tr>
+          <th>Value</th>
+          <th>Meaning</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr><td><code>ADD</code></td><td>Manual ba system add</td></tr>
+        <tr><td><code>SPEND</code></td><td>Credit spend</td></tr>
+        <tr><td><code>EXPIRE</code></td><td>Expired credit</td></tr>
+        <tr><td><code>REFUND</code></td><td>Refunded credit</td></tr>
+        <tr><td><code>REWARD</code></td><td>Reward hishebe add</td></tr>
+      </tbody>
+    </table>
+
+    <h3>3.3 CreditReason</h3>
+    <table>
+      <thead>
+        <tr>
+          <th>Value</th>
+          <th>Meaning</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr><td><code>SUBSCRIPTION_PURCHASE</code></td><td>Subscription purchase related credit</td></tr>
+        <tr><td><code>TASK_COMPLETION</code></td><td>Task complete hole provider reward</td></tr>
+        <tr><td><code>TASK_POST</code></td><td>Requester task post/spend/refund flow</td></tr>
+        <tr><td><code>REFERRAL_WEBSITE_VERIFIED</code></td><td>Referral stage 1 reward</td></tr>
+        <tr><td><code>REFERRAL_FIRST_BACKLINK</code></td><td>Referral stage 2 reward</td></tr>
+        <tr><td><code>REFERRAL_PAID_SUBSCRIPTION</code></td><td>Referral stage 3 reward</td></tr>
+        <tr><td><code>MANUAL</code></td><td>Manual admin/system operation</td></tr>
+      </tbody>
+    </table>
+
+    <h3>3.4 ReferralStage</h3>
+    <table>
+      <thead>
+        <tr>
+          <th>Value</th>
+          <th>Meaning</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr><td><code>SIGNED_UP</code></td><td>User signup complete</td></tr>
+        <tr><td><code>WEBSITE_VERIFIED</code></td><td>Referred website verified</td></tr>
+        <tr><td><code>FIRST_BACKLINK_ACCEPTED</code></td><td>First backlink accepted</td></tr>
+        <tr><td><code>PAID_SUBSCRIPTION</code></td><td>Paid subscription activated</td></tr>
+      </tbody>
+    </table>
+
+    <h2>4. Core Credit Tables</h2>
+
+    <h3>4.1 UserCreditWallet</h3>
+    <p>Prottek user er base wallet. Subscription credit ekhane direct number hisebe rakha hoy na; earned ar visibility wallet level e thake.</p>
+    <table>
+      <thead>
+        <tr>
+          <th>Field</th>
+          <th>Type</th>
+          <th>Constraint / Default</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr><td><code>id</code></td><td>String</td><td>PK, <code>cuid()</code></td><td>Wallet primary key</td></tr>
+        <tr><td><code>userId</code></td><td>String</td><td>Unique, FK</td><td>Wallet owner user id</td></tr>
+        <tr><td><code>earnedTaskCredits</code></td><td>Int</td><td>Default <code>0</code></td><td>Earned task credit balance</td></tr>
+        <tr><td><code>visibilityCredits</code></td><td>Int</td><td>Default <code>0</code></td><td>Visibility credit balance</td></tr>
+        <tr><td><code>createdAt</code></td><td>DateTime</td><td>Default <code>now()</code></td><td>Creation time</td></tr>
+        <tr><td><code>updatedAt</code></td><td>DateTime</td><td><code>@updatedAt</code></td><td>Last update time</td></tr>
+      </tbody>
+    </table>
+
+    <h3>4.2 SubscriptionCreditBatch</h3>
+    <p>Subscription credit batch-wise store hoy so that expiry and oldest-first deduction handle kora jay.</p>
+    <table>
+      <thead>
+        <tr>
+          <th>Field</th>
+          <th>Type</th>
+          <th>Constraint / Default</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr><td><code>id</code></td><td>String</td><td>PK, <code>cuid()</code></td><td>Batch primary key</td></tr>
+        <tr><td><code>walletId</code></td><td>String</td><td>FK</td><td>Related user wallet</td></tr>
+        <tr><td><code>userId</code></td><td>String</td><td>FK</td><td>Owner user id</td></tr>
+        <tr><td><code>subscriptionId</code></td><td>String?</td><td>Nullable FK</td><td>Source subscription</td></tr>
+        <tr><td><code>totalCredits</code></td><td>Int</td><td>Required</td><td>Original granted amount</td></tr>
+        <tr><td><code>remainingCredits</code></td><td>Int</td><td>Required</td><td>Current remaining spendable amount</td></tr>
+        <tr><td><code>expiresAt</code></td><td>DateTime</td><td>Required</td><td>Expiry time</td></tr>
+        <tr><td><code>createdAt</code></td><td>DateTime</td><td>Default <code>now()</code></td><td>Creation time</td></tr>
+        <tr><td><code>updatedAt</code></td><td>DateTime</td><td><code>@updatedAt</code></td><td>Last update time</td></tr>
+      </tbody>
+    </table>
+    <p class="small">Indexes: <code>walletId</code>, <code>userId</code>, <code>subscriptionId</code>, <code>expiresAt</code></p>
+
+    <h3>4.3 CreditLog</h3>
+    <p>Credit system er full ledger table. Sob spend, refund, reward, manual add/reverse ekhane history hishebe store howar kotha.</p>
+    <table>
+      <thead>
+        <tr>
+          <th>Field</th>
+          <th>Type</th>
+          <th>Constraint / Default</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr><td><code>id</code></td><td>String</td><td>PK, <code>cuid()</code></td><td>Log row id</td></tr>
+        <tr><td><code>walletId</code></td><td>String</td><td>FK</td><td>Related wallet</td></tr>
+        <tr><td><code>userId</code></td><td>String</td><td>FK</td><td>Owner user</td></tr>
+        <tr><td><code>creditType</code></td><td>Enum</td><td>Required</td><td>Which bucket changed</td></tr>
+        <tr><td><code>action</code></td><td>Enum</td><td>Required</td><td>Spend, refund, reward, etc.</td></tr>
+        <tr><td><code>reason</code></td><td>Enum</td><td>Required</td><td>Business reason</td></tr>
+        <tr><td><code>amount</code></td><td>Int</td><td>Required</td><td>How much moved</td></tr>
+        <tr><td><code>balanceBefore</code></td><td>Int</td><td>Required</td><td>Balance before operation</td></tr>
+        <tr><td><code>balanceAfter</code></td><td>Int</td><td>Required</td><td>Balance after operation</td></tr>
+        <tr><td><code>websiteId</code></td><td>String?</td><td>Nullable FK</td><td>Related website if any</td></tr>
+        <tr><td><code>taskId</code></td><td>String?</td><td>Nullable FK</td><td>Related task if any</td></tr>
+        <tr><td><code>referralId</code></td><td>String?</td><td>Nullable FK</td><td>Related referral if any</td></tr>
+        <tr><td><code>subscriptionId</code></td><td>String?</td><td>Nullable FK</td><td>Related subscription if any</td></tr>
+        <tr><td><code>subscriptionCreditBatchId</code></td><td>String?</td><td>Nullable FK</td><td>Related batch if any</td></tr>
+        <tr><td><code>note</code></td><td>String?</td><td>Nullable</td><td>Human-readable note</td></tr>
+        <tr><td><code>createdAt</code></td><td>DateTime</td><td>Default <code>now()</code></td><td>Log time</td></tr>
+      </tbody>
+    </table>
+    <p class="small">Indexes: <code>(walletId, createdAt)</code>, <code>(userId, createdAt)</code>, <code>(creditType, createdAt)</code>, <code>(reason, createdAt)</code>, plus foreign-key indexes.</p>
+
+    <h3>4.4 UserReferral</h3>
+    <p>Referral relationship table. Ek user arek user ke refer korle relation ekhane store hoy.</p>
+    <table>
+      <thead>
+        <tr>
+          <th>Field</th>
+          <th>Type</th>
+          <th>Constraint / Default</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr><td><code>id</code></td><td>String</td><td>PK, <code>cuid()</code></td><td>Referral id</td></tr>
+        <tr><td><code>referrerUserId</code></td><td>String</td><td>FK</td><td>User who referred</td></tr>
+        <tr><td><code>referredUserId</code></td><td>String</td><td>Unique, FK</td><td>User who was referred</td></tr>
+        <tr><td><code>referredWebsiteId</code></td><td>String?</td><td>Nullable FK</td><td>Website tied to referral</td></tr>
+        <tr><td><code>subscriptionId</code></td><td>String?</td><td>Nullable FK</td><td>Subscription tied to referral stage</td></tr>
+        <tr><td><code>codeUsed</code></td><td>String</td><td>Required</td><td>Referral code used</td></tr>
+        <tr><td><code>currentStage</code></td><td>Enum</td><td>Default <code>SIGNED_UP</code></td><td>Current progress stage</td></tr>
+        <tr><td><code>signedUpAt</code></td><td>DateTime</td><td>Default <code>now()</code></td><td>Signup timestamp</td></tr>
+        <tr><td><code>websiteVerifiedAt</code></td><td>DateTime?</td><td>Nullable</td><td>Stage 1 timestamp</td></tr>
+        <tr><td><code>firstBacklinkAt</code></td><td>DateTime?</td><td>Nullable</td><td>Stage 2 timestamp</td></tr>
+        <tr><td><code>paidSubscriptionAt</code></td><td>DateTime?</td><td>Nullable</td><td>Stage 3 timestamp</td></tr>
+        <tr><td><code>createdAt</code></td><td>DateTime</td><td>Default <code>now()</code></td><td>Creation time</td></tr>
+        <tr><td><code>updatedAt</code></td><td>DateTime</td><td><code>@updatedAt</code></td><td>Last update time</td></tr>
+      </tbody>
+    </table>
+
+    <h3>4.5 ReferralReward</h3>
+    <p>Referral er specific stage e koto reward dise tar immutable breakdown.</p>
+    <table>
+      <thead>
+        <tr>
+          <th>Field</th>
+          <th>Type</th>
+          <th>Constraint / Default</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr><td><code>id</code></td><td>String</td><td>PK, <code>cuid()</code></td><td>Reward row id</td></tr>
+        <tr><td><code>referralId</code></td><td>String</td><td>FK</td><td>Parent referral</td></tr>
+        <tr><td><code>stage</code></td><td>Enum</td><td>Required</td><td>Which stage generated reward</td></tr>
+        <tr><td><code>referrerTaskCredits</code></td><td>Int</td><td>Default <code>0</code></td><td>Reward to referrer task wallet</td></tr>
+        <tr><td><code>referrerVisibilityCredits</code></td><td>Int</td><td>Default <code>0</code></td><td>Reward to referrer visibility wallet</td></tr>
+        <tr><td><code>referredTaskCredits</code></td><td>Int</td><td>Default <code>0</code></td><td>Reward to referred user task wallet</td></tr>
+        <tr><td><code>referredVisibilityCredits</code></td><td>Int</td><td>Default <code>0</code></td><td>Reward to referred user visibility wallet</td></tr>
+        <tr><td><code>createdAt</code></td><td>DateTime</td><td>Default <code>now()</code></td><td>Reward issued time</td></tr>
+      </tbody>
+    </table>
+    <p class="small">Unique rule: one reward row per <code>(referralId, stage)</code></p>
+
+    <h2>5. Shared Tables Used by Credit System</h2>
+
+    <h3>5.1 User (credit-relevant fields only)</h3>
+    <table>
+      <thead>
+        <tr>
+          <th>Field</th>
+          <th>Type</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr><td><code>id</code></td><td>String</td><td>User primary key, all wallet/subscription/task relation er source</td></tr>
+        <tr><td><code>referralCode</code></td><td>String?</td><td>Referral code for invite flow</td></tr>
+        <tr><td><code>isReferralEnabled</code></td><td>Boolean</td><td>Referral usage on/off flag</td></tr>
+        <tr><td><code>creditWallet</code></td><td>Relation</td><td>One-to-one wallet relation</td></tr>
+        <tr><td><code>creditLogs</code></td><td>Relation</td><td>User ledger rows</td></tr>
+        <tr><td><code>subscriptionCreditBatches</code></td><td>Relation</td><td>User subscription batches</td></tr>
+        <tr><td><code>referralsSent</code></td><td>Relation</td><td>Referrer side records</td></tr>
+        <tr><td><code>referralsReceived</code></td><td>Relation</td><td>Referred side records</td></tr>
+        <tr><td><code>subscriptions</code></td><td>Relation</td><td>User subscriptions</td></tr>
+      </tbody>
+    </table>
+
+    <h3>5.2 Subscription</h3>
+    <table>
+      <thead>
+        <tr>
+          <th>Field</th>
+          <th>Type</th>
+          <th>Constraint / Default</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr><td><code>id</code></td><td>String</td><td>PK</td><td>Subscription id</td></tr>
+        <tr><td><code>userId</code></td><td>String</td><td>FK</td><td>Owner user</td></tr>
+        <tr><td><code>planId</code></td><td>String</td><td>FK</td><td>Purchased plan</td></tr>
+        <tr><td><code>status</code></td><td>Enum</td><td>Default <code>PENDING</code></td><td>ACTIVE, CANCELLED, EXPIRED, PENDING</td></tr>
+        <tr><td><code>startDate</code></td><td>DateTime</td><td>Required</td><td>Subscription start</td></tr>
+        <tr><td><code>endDate</code></td><td>DateTime?</td><td>Nullable</td><td>Subscription end</td></tr>
+        <tr><td><code>autoRenew</code></td><td>Boolean</td><td>Default <code>true</code></td><td>Auto-renew state</td></tr>
+        <tr><td><code>creditBatches</code></td><td>Relation</td><td>-</td><td>Credit batches generated by subscription</td></tr>
+        <tr><td><code>creditLogs</code></td><td>Relation</td><td>-</td><td>Ledger rows related to subscription</td></tr>
+      </tbody>
+    </table>
+
+    <h3>5.3 SubscriptionPlan</h3>
+    <table>
+      <thead>
+        <tr>
+          <th>Field</th>
+          <th>Type</th>
+          <th>Constraint / Default</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr><td><code>id</code></td><td>String</td><td>PK</td><td>Plan id</td></tr>
+        <tr><td><code>price</code></td><td>Decimal</td><td>Required</td><td>Plan price</td></tr>
+        <tr><td><code>credit</code></td><td>Int</td><td>Required</td><td>Plan-level credit amount</td></tr>
+        <tr><td><code>monthlyTaskCreditAllowance</code></td><td>Int</td><td>Default <code>1</code></td><td>Monthly grant size hint</td></tr>
+        <tr><td><code>maxTaskCreditCapacity</code></td><td>Int</td><td>Default <code>5</code></td><td>Maximum allowed task credit capacity</td></tr>
+        <tr><td><code>billingInterval</code></td><td>Enum</td><td>Default <code>MONTHLY</code></td><td>Monthly or yearly plan</td></tr>
+        <tr><td><code>isActive</code></td><td>Boolean</td><td>Default <code>true</code></td><td>Purchasable or not</td></tr>
+      </tbody>
+    </table>
+
+    <h3>5.4 PlacementTask</h3>
+    <p>Task table er credit settlement related fields ekhane thake.</p>
+    <table>
+      <thead>
+        <tr>
+          <th>Field</th>
+          <th>Type</th>
+          <th>Constraint / Default</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr><td><code>id</code></td><td>String</td><td>PK</td><td>Task id</td></tr>
+        <tr><td><code>requesterId</code></td><td>String</td><td>FK</td><td>Task requester</td></tr>
+        <tr><td><code>requesterWebsiteId</code></td><td>String</td><td>Required</td><td>Task tied website</td></tr>
+        <tr><td><code>selectedProviderId</code></td><td>String?</td><td>Nullable</td><td>Assigned provider</td></tr>
+        <tr><td><code>placementType</code></td><td>Enum</td><td>Required</td><td>BACKLINK_INSERTION, GUEST_POST, FLEXIBLE</td></tr>
+        <tr><td><code>creditCost</code></td><td>Int</td><td>Required</td><td>Initial calculated task cost</td></tr>
+        <tr><td><code>reservedCreditAmount</code></td><td>Int</td><td>Required</td><td>Initially reserved amount</td></tr>
+        <tr><td><code>finalCreditCost</code></td><td>Int?</td><td>Nullable</td><td>Final settlement cost after delivery</td></tr>
+        <tr><td><code>providerRewardCredits</code></td><td>Int?</td><td>Nullable</td><td>How much provider should earn</td></tr>
+        <tr><td><code>lifecycleStatus</code></td><td>Enum</td><td>Default <code>DRAFT</code></td><td>Task life cycle state</td></tr>
+        <tr><td><code>submissionStatus</code></td><td>Enum</td><td>Default <code>NOT_SUBMITTED</code></td><td>Delivery review state</td></tr>
+        <tr><td><code>creditLogs</code></td><td>Relation</td><td>-</td><td>Task-related credit history</td></tr>
+      </tbody>
+    </table>
+
+    <h3>5.5 Website (credit-relevant fields only)</h3>
+    <table>
+      <thead>
+        <tr>
+          <th>Field</th>
+          <th>Type</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr><td><code>id</code></td><td>String</td><td>Website primary key</td></tr>
+        <tr><td><code>authorId</code></td><td>String</td><td>Website owner, requester relation</td></tr>
+        <tr><td><code>verificationStatus</code></td><td>Enum</td><td>Referral stage and trust flow te use hote pare</td></tr>
+        <tr><td><code>creditLogs</code></td><td>Relation</td><td>Website-linked credit history</td></tr>
+        <tr><td><code>referrals</code></td><td>Relation</td><td>Referral flow te website relation</td></tr>
+      </tbody>
+    </table>
+
+    <h2>6. Table Relationships</h2>
+    <ul>
+      <li>One <code>User</code> has one <code>UserCreditWallet</code></li>
+      <li>One <code>UserCreditWallet</code> has many <code>SubscriptionCreditBatch</code></li>
+      <li>One <code>UserCreditWallet</code> has many <code>CreditLog</code></li>
+      <li>One <code>Subscription</code> can generate many <code>SubscriptionCreditBatch</code></li>
+      <li>One <code>PlacementTask</code> can have many <code>CreditLog</code> entries</li>
+      <li>One <code>UserReferral</code> can have many <code>ReferralReward</code> rows</li>
+      <li>One <code>UserReferral</code> can also be referenced by many <code>CreditLog</code> rows</li>
+      <li>One <code>Website</code> can be linked to many <code>CreditLog</code> and referral records</li>
+    </ul>
+
+    <h2>7. Business Rules</h2>
+
+    <h3>7.1 Credit Cost Rules</h3>
+    <table>
+      <thead>
+        <tr>
+          <th>Task Type</th>
+          <th>Initial Cost</th>
+          <th>Reserve Rule</th>
+          <th>Final Settlement</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><code>BACKLINK_INSERTION</code></td>
+          <td>1</td>
+          <td>1 reserve</td>
+          <td>Final cost 1</td>
+        </tr>
+        <tr>
+          <td><code>GUEST_POST</code></td>
+          <td>2</td>
+          <td>2 reserve</td>
+          <td>Final cost 2</td>
+        </tr>
+        <tr>
+          <td><code>FLEXIBLE</code></td>
+          <td>2</td>
+          <td>2 reserve</td>
+          <td>Final type backlink hole 1, guest post hole 2</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <h3>7.2 Spend Order</h3>
+    <ul>
+      <li>Default e age subscription credits use hoy</li>
+      <li>Subscription enough na hole earned credits fallback hishebe use hoy</li>
+      <li>Caller chaile explicit <code>SUBSCRIPTION</code> ba <code>EARNED</code> source force korte pare</li>
+    </ul>
+
+    <h3>7.3 Refund Rules</h3>
+    <ul>
+      <li>Original source earned hole refund earned wallet e back jay</li>
+      <li>Original source subscription hole active batch e back jay</li>
+      <li>Refund operation o ledger e <code>REFUND</code> action hishebe record hoy</li>
+    </ul>
+
+    <h3>7.4 Provider Reward Rules</h3>
+    <ul>
+      <li>Provider reward always earned wallet e jay</li>
+      <li>Usually provider reward amount = final task cost</li>
+      <li>Reward operation <code>TASK_COMPLETION</code> reason e log hoy</li>
+    </ul>
+
+    <h3>7.5 Referral Rules</h3>
+    <ul>
+      <li>Referral stage tracking ache: signup, website verified, first backlink accepted, paid subscription</li>
+      <li>Stage-wise reward breakdown table ache</li>
+      <li>Current codebase e progress read implemented, full reward issuance flow visible na</li>
+    </ul>
+
+    <h2>8. Runtime Flow</h2>
+
+    <h3>8.1 User Registration Flow</h3>
+    <ol>
+      <li>User create hoy</li>
+      <li>System <code>UserCreditWallet</code> create kore with zero balance</li>
+      <li>Tarpor user future spend/reward/refund receive korte pare</li>
+    </ol>
+
+    <h3>8.2 Task Spend Flow</h3>
+    <ol>
+      <li>Task create time <code>creditCost</code> and <code>reservedCreditAmount</code> calculate hoy</li>
+      <li>Credit deduction request ashe <code>CreditTaskService</code> e</li>
+      <li>Task id valid kina check hoy</li>
+      <li>User wallet load hoy, na thakle create hoy</li>
+      <li>Subscription batch load hoy and oldest expiry first spend hoy</li>
+      <li>Spend log <code>CreditLog</code> e save hoy</li>
+    </ol>
+
+    <h3>8.3 Task Delivery Settlement Flow</h3>
+    <ol>
+      <li>Provider submit korle final task type determine hoy</li>
+      <li><code>finalCreditCost</code> set hoy</li>
+      <li><code>providerRewardCredits</code> set hoy</li>
+      <li>Requester spend and provider reward alada credit operations diye execute hote pare</li>
+    </ol>
+
+    <h3>8.4 Statement Flow</h3>
+    <ol>
+      <li>User statement request kore</li>
+      <li>Optional filter apply hoy: type, action, reason, website, date range</li>
+      <li>Paginated <code>CreditLog</code> rows return hoy</li>
+    </ol>
+
+    <h2>9. Public and Internal Endpoints</h2>
+    <table>
+      <thead>
+        <tr>
+          <th>Endpoint</th>
+          <th>Purpose</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr><td><code>GET /credits/me</code></td><td>User total credit summary</td></tr>
+        <tr><td><code>GET /credits/statement</code></td><td>Paginated credit statement</td></tr>
+        <tr><td><code>GET /credits/earned</code></td><td>Earned credit balance</td></tr>
+        <tr><td><code>GET /credits/subscription</code></td><td>Active subscription credit balance</td></tr>
+        <tr><td><code>GET /credits/referrers/progress</code></td><td>Referral progress breakdown</td></tr>
+        <tr><td><code>POST /credits/tasks/deduct</code></td><td>Deduct task credit</td></tr>
+        <tr><td><code>POST /credits/tasks/refund</code></td><td>Refund task credit</td></tr>
+        <tr><td><code>POST /credits/tasks/reward-provider</code></td><td>Reward provider earned credit</td></tr>
+      </tbody>
+    </table>
+
+    <h2>10. Current Implementation Notes</h2>
+    <div class="note">
+      <p><strong>Important:</strong> Current codebase e schema and core credit operations implemented, but kichu orchestration gap ache.</p>
+      <ul>
+        <li>Task service cost calculate kore, kintu actual wallet movement separate credit service call diye hoy</li>
+        <li><code>SubscriptionCreditBatch</code> read/update visible, but current repo te batch grant/create flow clearly visible na</li>
+        <li>Referral progress read ache, but referral reward issuance er full active flow current repo te fully visible na</li>
+      </ul>
+    </div>
+
+    <h2>11. Plain-English Summary</h2>
+    <p>
+      Short e bolle, Backlyst er credit system hocche user er task point wallet. Requester task korte point spend kore,
+      provider task finish kore point earn kore, subscription thakle batch-wise point use korte pare, ar sob movement ledger e save hoy.
+      Ei structure ta future e referral, expiry, admin adjustment, ar analytics support korar jonno design kora.
+    </p>
+  </main>
+</body>
+</html>

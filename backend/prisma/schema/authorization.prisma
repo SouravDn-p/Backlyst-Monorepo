@@ -1,0 +1,68 @@
+enum AdminAuthorizationSection {
+  ADMIN_MANAGEMENT
+  DASHBOARD
+  ANALYTICS
+  MARKETPLACE
+  WEBSITES
+  CREDITS
+  REFERRALS
+  SUBSCRIPTIONS
+  USERS
+  TASKS
+  REWARDS
+  COMMUNITY_SHOWCASE
+  MESSAGING
+  NOTIFICATIONS
+  LEGAL_DOCS
+  COMPLIANCE
+  CONTACT
+  BLOG
+  TAXONOMY
+  FORENSIC_AUDIT
+  PLATFORM_SETTINGS
+}
+
+enum AdminAuthorizationAuditAction {
+  ADMIN_CREATED
+  ADMIN_UPDATED
+  ADMIN_DELETED
+  PERMISSIONS_REPLACED
+}
+
+model AdminPermission {
+  id           String                    @id @default(cuid())
+  adminId      String
+  section      AdminAuthorizationSection
+  canCreate    Boolean                   @default(false)
+  canRead      Boolean                   @default(false)
+  canUpdate    Boolean                   @default(false)
+  canDelete    Boolean                   @default(false)
+  assignedById String?
+  createdAt    DateTime                  @default(now())
+  updatedAt    DateTime                  @updatedAt
+
+  admin      User  @relation("AdminPermissions", fields: [adminId], references: [id], onDelete: Cascade)
+  assignedBy User? @relation("AdminPermissionsAssignedBy", fields: [assignedById], references: [id], onDelete: SetNull)
+
+  @@unique([adminId, section])
+  @@index([adminId])
+  @@index([section])
+}
+
+model AdminPermissionAuditLog {
+  id            String                        @id @default(cuid())
+  actorId       String
+  targetAdminId String?
+  action        AdminAuthorizationAuditAction
+  previousValue Json?
+  newValue      Json?
+  reason        String?
+  createdAt     DateTime                      @default(now())
+
+  actor       User  @relation("AdminAuthorizationAuditActor", fields: [actorId], references: [id], onDelete: Cascade)
+  targetAdmin User? @relation("AdminAuthorizationAuditTarget", fields: [targetAdminId], references: [id], onDelete: SetNull)
+
+  @@index([actorId, createdAt])
+  @@index([targetAdminId, createdAt])
+  @@index([action])
+}

@@ -1,0 +1,201 @@
+model User {
+  id                                     String            @id @default(uuid())
+  name                                   String
+  email                                  String            @unique
+  referralCode                           String?           @unique
+  isReferralEnabled                      Boolean           @default(true)
+  role                                   UserRole          @default(USER)
+  companyName                            String?
+  companyWebsite                         String?
+  companyIndustry                        String?
+  businessType                           UserBusinessType?
+  imageKey                               String?
+  imageUrl                               String?
+  country                                String?
+  phoneNumber                            String?
+  vatUid                                 String?
+  password                               String?
+  notificationTaskStatusUpdates          Boolean           @default(true)
+  notificationCreditBalanceAlerts        Boolean           @default(true)
+  notificationDisputeReviewNotifications Boolean           @default(true)
+  notificationSystemAnnouncements        Boolean           @default(false)
+  taskAutoAcceptTasks                    Boolean           @default(false)
+  taskManualReviewRequired               Boolean           @default(true)
+
+  lastPasswordChangeTime DateTime?
+  registrationTime       DateTime?
+
+  isVerified Boolean    @default(false)
+  status     UserStatus @default(NOT_VERIFIED)
+  isDeleted  Boolean    @default(false)
+
+  suspendStart DateTime?
+  suspendEnd   DateTime?
+
+  punishmentReason String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  creditLogsAsActor      CreditLog[]             @relation("CreditLogActor")
+  adminCreditAdjustments AdminCreditAdjustment[] @relation("AdminCreditAdjustments")
+  referralApprovals      UserReferral[]          @relation("ReferralApprovedBy")
+  referralRevocations    UserReferral[]          @relation("ReferralRevokedBy")
+  adminReferralAuditLogs AdminReferralAuditLog[] @relation("AdminReferralAuditAdmin")
+  referralProgramFreezes ReferralProgramConfig[] @relation("ReferralProgramFrozenBy")
+
+  websiteWalletLockAudits WebsiteWalletLockAudit[] @relation("WebsiteWalletLockAdmin")
+
+  sentMessages           Message[]               @relation("SenderMessages")
+  receivedMessages       Message[]               @relation("ReceiverMessages")
+  messageReports         MessageReport[]         @relation("MessageReporter")
+  notificationsReceived  Notification[]          @relation("UserNotificationsReceived")
+  notificationsActed     Notification[]          @relation("UserNotificationsActed")
+  notificationPreference NotificationPreference?
+  reviewedMessageReports MessageReport[]         @relation("MessageReportReviewer")
+
+  requesterPlacementTasks     PlacementTask[]             @relation("RequesterPlacementTasks")
+  selectedProviderTasks       PlacementTask[]             @relation("SelectedProviderTasks")
+  placementApplications       PlacementApplication[]      @relation("ProviderPlacementApplications")
+  taskFlowsAsRequester        TaskFlow[]                  @relation("TaskFlowRequester")
+  taskFlowsAsProvider         TaskFlow[]                  @relation("TaskFlowProvider")
+  taskFlowsAsActor            TaskFlow[]                  @relation("TaskFlowActor")
+  requestedDeadlineExtensions TaskDeadlineExtension[]     @relation("RequestedDeadlineExtensions")
+  respondedDeadlineExtensions TaskDeadlineExtension[]     @relation("RespondedDeadlineExtensions")
+  requesterDirectRequestsSent DirectTaskRequest[]         @relation("RequesterDirectRequestsSent")
+  providerDirectRequestsReceived DirectTaskRequest[]      @relation("ProviderDirectRequestsReceived")
+  creditWallet                UserCreditWallet?
+  creditLogs                  CreditLog[]                 @relation("UserCreditLogs")
+  subscriptionCreditBatches   SubscriptionCreditBatch[]
+  referralsSent               UserReferral[]              @relation("ReferrerUser")
+  referralsReceived           UserReferral[]              @relation("ReferredUser")
+  userGovernanceNotes         UserGovernanceNote[]        @relation("GovernanceNoteSubject")
+  userGovernanceNotesAuthored UserGovernanceNote[]        @relation("GovernanceNoteAdmin")
+  websites                    Website[]
+  weeklyContributions         WebsiteWeeklyContribution[]
+  verifiedPlacements          WebsiteVerifiedPlacement[]
+  websiteActivityStreaks      WebsiteActivityStreak[]
+  badges                      UserBadge[]
+  rewardProfile               UserRewardProfile?
+  rewardBenefits              UserRewardBenefit[]
+  rewardLedgerEntries         RewardLedger[]
+  rewardAuditLogsAuthored     RewardAuditLog[]            @relation("RewardAuditActor")
+  rewardAuditLogsTargeted     RewardAuditLog[]            @relation("RewardAuditTargetUser")
+  showcaseStats               UserShowcaseStats?
+  ownedWebsiteShowcaseStats   WebsiteShowcaseStats[]
+  generatedAnalyticsReports   AdminAnalyticsReport[]      @relation("AdminGeneratedAnalyticsReports")
+  sessions                    Session[]
+  subscriptions               Subscription[]
+  governanceNotes             AdminUserGovernanceNote[]   @relation("AdminGovernanceNoteSubject")
+  governanceNotesAuthored     AdminUserGovernanceNote[]   @relation("AdminGovernanceNoteAdmin")
+  adminPermissionsAssigned    AdminPermission[]           @relation("AdminPermissionsAssignedBy")
+  adminPermissions            AdminPermission[]           @relation("AdminPermissions")
+  authorizationAuditLogs      AdminPermissionAuditLog[]    @relation("AdminAuthorizationAuditActor")
+  authorizationAuditTargets   AdminPermissionAuditLog[]    @relation("AdminAuthorizationAuditTarget")
+
+  websiteVerifications            WebsiteVerification[]    @relation("AdminUserManualReviews")
+  authProviderAccounts            AuthProviderAccount[]
+  userLegalAcceptances            UserLegalAcceptance[]
+  legalDocumentVersions           LegalDocumentVersion[]
+  websiteMatchingProfiles         WebsiteMatchingProfile[]
+  providerOpportunityImpressions  OpportunityImpression[]  @relation("OpportunityProvider")
+  requesterOpportunityImpressions OpportunityImpression[]  @relation("OpportunityRequester")
+  marketplaceOverridesCreated     MarketplaceOverride[]    @relation("MarketplaceOverrideAdmin")
+  blogPosts                       BlogPost[]
+  publisher                       Publisher?
+}
+
+model UserGovernanceNote {
+  id        String   @id @default(cuid())
+  userId    String
+  adminId   String
+  note      String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user  User @relation("GovernanceNoteSubject", fields: [userId], references: [id], onDelete: Cascade)
+  admin User @relation("GovernanceNoteAdmin", fields: [adminId], references: [id], onDelete: Cascade)
+
+  @@index([userId, createdAt])
+  @@index([adminId])
+}
+
+model AuthProviderAccount {
+  id         String       @id @default(uuid())
+  userId     String
+  provider   AuthProvider
+  providerId String
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerId])
+}
+
+enum AuthProvider {
+  GOOGLE
+}
+
+model Publisher {
+  id String @id @default(uuid())
+
+  isVerified          Boolean  @default(true) //TODO:  TEMPORARY: defaults to true until verification system is introduced.
+  // Will be switched to false once onboarding verification flow is implemented.
+  nicheSpecialization String
+  bio                 String
+  tags                String[]
+
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId    String   @unique
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model AdminUserGovernanceNote {
+  id            String   @id @default(cuid())
+  subjectUserId String
+  adminUserId   String
+  note          String
+  createdAt     DateTime @default(now())
+
+  subjectUser User @relation("AdminGovernanceNoteSubject", fields: [subjectUserId], references: [id], onDelete: Cascade)
+  adminUser   User @relation("AdminGovernanceNoteAdmin", fields: [adminUserId], references: [id], onDelete: Cascade)
+
+  @@index([subjectUserId, createdAt])
+  @@index([adminUserId, createdAt])
+}
+
+//////////// --------------------for algorithm --------------------///////////////
+
+// model UserMatchingProfile {
+//   id                    String    @id @default(uuid())
+//   userId                String    @unique
+//   user                  User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+//   // à¦®à§‚à¦² à¦¸à§à¦•à§‹à¦°à¦¸à¦®à§‚à¦¹ (à¦¡à¦¿à¦«à¦²à§à¦Ÿ à¦®à¦¾à¦¨ à¦¸à¦¹)
+//   visibilityScore       Float     @default(50.0) // VS (à¦ªà¦°à¦¿à¦¸à§€à¦®à¦¾: à§¦ - à§§à§¦à§¦)
+//   reputationScore       Float     @default(80.0) // RS (à¦ªà¦°à¦¿à¦¸à§€à¦®à¦¾: à§¦ - à§§à§¦à§¦)
+//   opportunityScore      Float     @default(0.0)  // OS (à¦‡à¦‰à¦œà¦¾à¦° à¦•à¦¤à¦•à§à¦·à¦£ à¦•à¦¾à¦œ à¦ªà¦¾à§Ÿà¦¨à¦¿ à¦¤à¦¾à¦° à¦‰à¦ªà¦° à¦­à¦¿à¦¤à§à¦¤à¦¿ à¦•à¦°à§‡ à¦¬à¦¾à§œà§‡)
+//   boostFactor           Float     @default(1.0)  // BF (à¦¨à¦¤à§à¦¨ à¦¬à¦¾ à¦…à¦¨à¦—à§à¦°à¦¸à¦° à¦‡à¦‰à¦œà¦¾à¦°à¦¦à§‡à¦° à¦¸à¦¾à¦®à§Ÿà¦¿à¦• à¦¸à§à¦¬à¦¿à¦§à¦¾)
+
+//   // à¦®à§‡à¦Ÿà§à¦°à¦¿à¦•à¦¸ (à¦¯à¦¾ à¦¦à¦¿à§Ÿà§‡ à¦¸à§à¦•à§‹à¦° à¦¹à¦¿à¦¸à§‡à¦¬ à¦¹à¦¬à§‡)
+//   completedInteractions Int       @default(0)    // à¦¸à¦«à¦²à¦­à¦¾à¦¬à§‡ à¦¸à¦®à§à¦ªà¦¨à§à¦¨ à¦•à¦°à¦¾ à¦•à¦¾à¦œà§‡à¦° à¦¸à¦‚à¦–à§à¦¯à¦¾
+//   failedInteractions    Int       @default(0)    // à¦°à¦¿à¦œà§‡à¦•à§à¦Ÿà§‡à¦¡ à¦¬à¦¾ à¦¡à§‡à¦¡à¦²à¦¾à¦‡à¦¨ à¦®à¦¿à¦¸ à¦•à¦°à¦¾ à¦•à¦¾à¦œà§‡à¦° à¦¸à¦‚à¦–à§à¦¯à¦¾
+//   totalInteractions     Int       @default(0)    // à¦®à§‹à¦Ÿ à¦…à§à¦¯à¦¾à¦¸à¦¾à¦‡à¦¨ à¦¹à¦“à§Ÿà¦¾ à¦•à¦¾à¦œà§‡à¦° à¦¸à¦‚à¦–à§à¦¯à¦¾
+//   qualityRatingSum      Float     @default(0.0)  // à¦•à§à¦²à¦¾à§Ÿà§‡à¦¨à§à¦Ÿà§‡à¦° à¦¦à§‡à¦“à§Ÿà¦¾ à¦°à§‡à¦Ÿà¦¿à¦‚à§Ÿà§‡à¦° à¦¸à¦®à¦·à§à¦Ÿà¦¿
+//   avgQualityRating      Float     @default(0.0)  // à¦—à§œ à¦•à§‹à§Ÿà¦¾à¦²à¦¿à¦Ÿà¦¿ à¦°à§‡à¦Ÿà¦¿à¦‚ (à§§.à§¦ - à§«.à§¦)
+//   completionRate        Float     @default(1.0)  // à¦•à¦®à¦ªà§à¦²à¦¿à¦¶à¦¨ à¦°à§‡à¦Ÿ (Completed / Total)
+
+//   // à¦¸à¦®à§Ÿà¦•à¦¾à¦² à¦“ à¦«à§à¦²à¦¾à¦—
+//   lastMatchedAt         DateTime?                // à¦¸à¦°à§à¦¬à¦¶à§‡à¦· à¦®à§à¦¯à¦¾à¦š à¦¬à¦¾ à¦•à¦¾à¦œ à¦ªà¦¾à¦“à§Ÿà¦¾à¦° à¦¸à¦®à§Ÿ
+//   boostDecayCount       Int       @default(0)    // à¦¬à§à¦¸à§à¦Ÿ à¦•à¦¤à¦Ÿà¦¿ à¦•à¦¾à¦œà§‡à¦° à¦ªà¦° à¦¶à§‡à¦· à¦¹à¦¬à§‡ à¦¤à¦¾à¦° à¦•à¦¾à¦‰à¦¨à§à¦Ÿà¦¾à¦°
+//   isSuppressed          Boolean   @default(false) // à¦ªà§‡à¦¨à¦¾à¦²à§à¦Ÿà¦¿à¦° à¦•à¦¾à¦°à¦£à§‡ à¦­à¦¿à¦œà¦¿à¦¬à¦¿à¦²à¦¿à¦Ÿà¦¿ à¦¬à¦¨à§à¦§ à¦•à¦¿à¦¨à¦¾
+//   suppressedUntil       DateTime?                // à¦ªà§‡à¦¨à¦¾à¦²à§à¦Ÿà¦¿ à¦¶à§‡à¦· à¦¹à¦“à§Ÿà¦¾à¦° à¦¸à¦®à§Ÿ
+//   forceMatchNext        Boolean   @default(false) // à¦ªà¦°à¦¬à¦°à§à¦¤à§€ à¦¸à¦¾à¦‡à¦•à§‡à¦²à§‡ à¦¯à§‡à¦•à§‹à¦¨à§‹ à¦®à§‚à¦²à§à¦¯à§‡ à¦•à¦¾à¦œ à¦¦à§‡à§Ÿà¦¾à¦° à¦«à§à¦²à¦¾à¦—
+
+//   createdAt             DateTime  @default(now())
+//   updatedAt             DateTime  @updatedAt
+
+//   @@index([visibilityScore])
+//   @@index([reputationScore])
+//   @@index([opportunityScore])
+// }

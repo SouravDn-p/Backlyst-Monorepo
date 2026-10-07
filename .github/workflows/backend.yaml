@@ -1,0 +1,253 @@
+name: Backend CI/CD
+
+on:
+  push:
+    branches:
+      - main
+      - dev
+    paths:
+      - "backend/**"
+      - "infrastructure/docker/**"
+      - ".github/workflows/backend.yaml"
+  pull_request:
+    branches:
+      - main
+      - dev
+    paths:
+      - "backend/**"
+      - "infrastructure/docker/**"
+
+permissions:
+  contents: read
+  packages: write
+  id-token: write
+
+jobs:
+  build-and-push:
+    name: Build & Push Backend Image
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Create temporary .env file
+        working-directory: backend
+        run: touch .env
+
+      - name: Set Environment & Repository Names
+        run: |
+          echo "COMPOSE_FILE=infrastructure/docker/dev/compose.dev.yaml" >> $GITHUB_ENV
+          echo "PROFILE=dev" >> $GITHUB_ENV
+          echo "ECR_REPO=backlyst-dev-backend" >> $GITHUB_ENV
+
+      - name: Log in to GitHub Container Registry (GHCR)
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Configure AWS Credentials (OIDC)
+        if: github.event_name == 'push'
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: arn:aws:iam::622711945657:role/backlyst-dev-github-actions-ecr-role
+          aws-region: eu-west-2
+          audience: sts.amazonaws.com
+
+      - name: Log in to Amazon ECR
+        if: github.event_name == 'push'
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Setup Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build Docker Image
+        run: |
+          docker compose -f $COMPOSE_FILE --profile $PROFILE build backend
+
+          # Tag for GHCR
+          docker tag ghcr.io/backlyst/backlystapp-backend:$PROFILE ghcr.io/backlyst/backlystapp-backend:${{ github.sha }}
+
+          # Tag for Amazon ECR
+          if [ "${{ github.event_name }}" = "push" ]; then
+            ECR_REGISTRY="${{ steps.login-ecr.outputs.registry }}"
+            docker tag ghcr.io/backlyst/backlystapp-backend:$PROFILE $ECR_REGISTRY/$ECR_REPO:$PROFILE
+            docker tag ghcr.io/backlyst/backlystapp-backend:$PROFILE $ECR_REGISTRY/$ECR_REPO:${{ github.sha }}
+          fi
+
+      - name: Push to GitHub Container Registry (GHCR)
+        if: github.event_name == 'push'
+        run: |
+          docker push ghcr.io/backlyst/backlystapp-backend:$PROFILE
+          docker push ghcr.io/backlyst/backlystapp-backend:${{ github.sha }}
+
+      - name: Push to Amazon ECR
+        if: github.event_name == 'push'
+        run: |
+          ECR_REGISTRY="${{ steps.login-ecr.outputs.registry }}"
+          docker push $ECR_REGISTRY/$ECR_REPO:$PROFILE
+          docker push $ECR_REGISTRY/$ECR_REPO:${{ github.sha }}
+
+  # ============================================================
+  # Deploy to Backend EC2 via AWS SSM (no SSH needed)
+  # ============================================================
+  deploy:
+    name: Deploy Backend to EC2
+    runs-on: ubuntu-latest
+    needs: build-and-push
+    if: github.event_name == 'push'
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Configure AWS Credentials (OIDC)
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: arn:aws:iam::622711945657:role/backlyst-dev-github-actions-ecr-role
+          aws-region: eu-west-2
+          audience: sts.amazonaws.com
+
+      - name: Copy compose & start script to Backend EC2 via SSM
+        run: |
+          COMPOSE_CONTENT=$(cat infrastructure/docker/dev/docker-compose.backend.yaml | base64 -w 0)
+          START_CONTENT=$(cat infrastructure/docker/dev/start-backend.sh | base64 -w 0)
+
+          COMMAND_ID=$(aws ssm send-command \
+            --region eu-west-2 \
+            --instance-ids "i-00bf48d4ad48bac2c" \
+            --document-name "AWS-RunShellScript" \
+            --comment "Backlyst Backend Deploy - ${{ github.sha }}" \
+            --parameters "commands=[
+              \"mkdir -p /opt/backlyst/backend\",
+              \"echo '$COMPOSE_CONTENT' | base64 -d > /opt/backlyst/backend/docker-compose.backend.yaml\",
+              \"echo '$START_CONTENT' | base64 -d > /opt/backlyst/backend/start-backend.sh\",
+              \"chmod +x /opt/backlyst/backend/start-backend.sh\"
+            ]" \
+            --query "Command.CommandId" \
+            --output text)
+
+          echo "SSM Command ID (copy files): $COMMAND_ID"
+
+          # Wait for the file copy to finish
+          if ! aws ssm wait command-executed \
+            --command-id "$COMMAND_ID" \
+            --instance-id "i-00bf48d4ad48bac2c" \
+            --region eu-west-2; then
+            echo "❌ File copy failed on EC2. Fetching execution logs:"
+            aws ssm get-command-invocation \
+              --command-id "$COMMAND_ID" \
+              --instance-id "i-00bf48d4ad48bac2c" \
+              --region eu-west-2 \
+              --query "{Status:Status,Output:StandardOutputContent,Error:StandardErrorContent}" \
+              --output json
+            exit 1
+          fi
+
+          echo "✅ Files copied successfully."
+
+      - name: Run start script on Backend EC2 via SSM
+        run: |
+          COMMAND_ID=$(aws ssm send-command \
+            --region eu-west-2 \
+            --instance-ids "i-00bf48d4ad48bac2c" \
+            --document-name "AWS-RunShellScript" \
+            --comment "Backlyst Backend Start - ${{ github.sha }}" \
+            --parameters "commands=[
+              \"bash /opt/backlyst/backend/start-backend.sh --update\"
+            ]" \
+            --query "Command.CommandId" \
+            --output text)
+
+          echo "SSM Command ID (deploy): $COMMAND_ID"
+
+          # Wait for deployment to finish (up to 5 minutes)
+          if ! aws ssm wait command-executed \
+            --command-id "$COMMAND_ID" \
+            --instance-id "i-00bf48d4ad48bac2c" \
+            --region eu-west-2; then
+            echo "❌ Deployment start script failed on EC2. Fetching execution logs:"
+            aws ssm get-command-invocation \
+              --command-id "$COMMAND_ID" \
+              --instance-id "i-00bf48d4ad48bac2c" \
+              --region eu-west-2 \
+              --query "{Status:Status,Output:StandardOutputContent,Error:StandardErrorContent}" \
+              --output json
+            exit 1
+          fi
+
+          echo "✅ Backend deployed successfully!"
+
+      - name: Verify container health & stream logs via SSM
+        run: |
+          echo "⏳ Monitoring backend container startup and health..."
+          for i in $(seq 1 15); do
+            COMMAND_ID=$(aws ssm send-command \
+              --region eu-west-2 \
+              --instance-ids "i-00bf48d4ad48bac2c" \
+              --document-name "AWS-RunShellScript" \
+              --comment "Health check attempt $i" \
+              --parameters "commands=[
+                \"echo '=== CONTAINER STATUS ==='\",
+                \"docker inspect --format='{{.State.Status}} (Health: {{if .State.Health}}{{.State.Health.Status}}{{else}}none{{end}})' backlyst-backend 2>/dev/null || echo 'not found'\",
+                \"echo '=== HTTP HEALTH CHECK ==='\",
+                \"curl -s -w '\nHTTP_CODE: %{http_code}\n' http://127.0.0.1:5000/health || echo 'Curl failed'\",
+                \"echo '=== RECENT LOGS ==='\",
+                \"docker logs --tail 15 backlyst-backend 2>&1\"
+              ]" \
+              --query "Command.CommandId" \
+              --output text)
+
+            aws ssm wait command-executed \
+              --command-id "$COMMAND_ID" \
+              --instance-id "i-00bf48d4ad48bac2c" \
+              --region eu-west-2
+
+            OUTPUT=$(aws ssm get-command-invocation \
+              --command-id "$COMMAND_ID" \
+              --instance-id "i-00bf48d4ad48bac2c" \
+              --region eu-west-2 \
+              --query "StandardOutputContent" \
+              --output text)
+
+            echo "--------------------------------------------------------"
+            echo "Attempt $i/15:"
+            echo "$OUTPUT"
+            echo "--------------------------------------------------------"
+
+            if echo "$OUTPUT" | grep -q "HTTP_CODE: 200"; then
+              echo "🎉 Backend container is healthy and responding with HTTP 200 on /health!"
+              exit 0
+            fi
+
+            if echo "$OUTPUT" | grep -q "Health: unhealthy"; then
+              echo "❌ Backend container became unhealthy! Full logs:"
+              COMMAND_ID=$(aws ssm send-command \
+                --region eu-west-2 \
+                --instance-ids "i-00bf48d4ad48bac2c" \
+                --document-name "AWS-RunShellScript" \
+                --parameters 'commands=["docker logs --tail 100 backlyst-backend"]' \
+                --query "Command.CommandId" \
+                --output text)
+              aws ssm wait command-executed \
+                --command-id "$COMMAND_ID" \
+                --instance-id "i-00bf48d4ad48bac2c" \
+                --region eu-west-2
+              aws ssm get-command-invocation \
+                --command-id "$COMMAND_ID" \
+                --instance-id "i-00bf48d4ad48bac2c" \
+                --region eu-west-2 \
+                --query "StandardOutputContent" \
+                --output text
+              exit 1
+            fi
+
+            sleep 8
+          done
+
+          echo "❌ Timed out waiting for backend to respond with HTTP 200 (2 minutes)"
+          exit 1
+

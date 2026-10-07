@@ -1,0 +1,57 @@
+<div class='row'>
+  <span class='label'>Subject:</span>
+  {{subject}}
+</div>
+
+<div class='row'>
+  <span class='label'>Service:</span>
+  {{serviceName}}
+</div>
+
+<div class='row'>
+  <span class='label'>Name:</span>
+  {{firstName}}
+  {{lastName}}
+</div>
+
+<div class='row'>
+  <span class='label'>Company:</span>
+  {{companyName}}
+</div>
+
+<div class='row'>
+  <span class='label'>Email:</span>
+  {{email}}
+</div>
+
+{{#if date}}
+  <div class='row'>
+    <span class='label'>Date:</span>
+    {{date}}
+  </div>
+{{/if}}
+
+{{#if time}}
+  <div class='row'>
+    <span class='label'>Time:</span>
+    {{time}}
+  </div>
+{{/if}}
+
+{{#if fullAddress}}
+  <div class='row'>
+    <span class='label'>Address:</span>
+    {{fullAddress}}
+  </div>
+{{/if}}
+
+{{#if fileLink}}
+  <div class='row'>
+    <span class='label'>Attachment:</span>
+    <a class='link' href='{{fileLink}}' target='_blank'>View uploaded file</a>
+  </div>
+{{/if}}
+
+<div class='message-box'>
+  {{message}}
+</div>

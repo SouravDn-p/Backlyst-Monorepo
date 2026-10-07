@@ -1,0 +1,145 @@
+enum WebsiteMarketplaceVisibilityStatus {
+  VISIBLE
+  GRACE_PERIOD
+  HIDDEN
+}
+
+model Website {
+  id         String  @id @default(uuid())
+  name       String
+  authorId   String
+  websiteUrl String  @unique
+  industry   String
+  country    String
+  isDeleted  Boolean @default(false)
+
+  description String?
+  logoKey     String?
+  tagline     String?
+
+  // Cached (optionals)
+  verificationStatus WebsiteVerificationStatus @default(PENDING)
+  verifiedAt         DateTime?
+  verifiedMethod     WebsiteVerificationType?
+
+  marketplaceVisibilityStatus WebsiteMarketplaceVisibilityStatus @default(VISIBLE)
+  visibilityGraceStartedAt    DateTime?
+  visibilityGraceEndsAt       DateTime?
+
+  latestVerificationId String?
+
+  adminCreditAdjustments AdminCreditAdjustment[]
+
+  walletLockAudits WebsiteWalletLockAudit[]
+
+  author                          User                        @relation(fields: [authorId], references: [id])
+  websiteVerifications            WebsiteVerification[]
+  creditWallet                    WebsiteCreditWallet?
+  creditLogs                      CreditLog[]                 @relation("WebsiteCreditLogs")
+  referrals                       UserReferral[]              @relation("ReferralWebsite")
+  weeklyContributions             WebsiteWeeklyContribution[]
+  verifiedPlacements              WebsiteVerifiedPlacement[]
+  milestoneProgress               WebsiteMilestoneProgress?
+  activityStreak                  WebsiteActivityStreak?
+  showcaseStats                   WebsiteShowcaseStats?
+  rewardLedgerEntries             RewardLedger[]
+  matchingProfile                 WebsiteMatchingProfile?
+  providerOpportunityImpressions  OpportunityImpression[]     @relation("OpportunityProviderWebsite")
+  requesterOpportunityImpressions OpportunityImpression[]     @relation("OpportunityRequesterWebsite")
+  riskEvents                      RiskEvent[]                 @relation("WebsiteRiskEvents")
+  manualMatchesAsProvider         ManualMatchQueue[]          @relation("ManualMatchProviderWebsite")
+  manualMatchesAsRequester        ManualMatchQueue[]          @relation("ManualMatchRequesterWebsite")
+  marketplaceOverrides            MarketplaceOverride[]
+  behaviourPatterns               BehaviourPattern[]          @relation("WebsiteBehaviourPatterns")
+  qualityStatusLogs               WebsiteQualityStatusLog[]   @relation("WebsiteQualityStatusLogs")
+  qualityScoreHistory             QualityScoreHistory[]       @relation("WebsiteQualityScoreHistory")
+
+  marketplaceCategories WebsiteMarketplaceCategory[]
+  marketplaceTags       WebsiteMarketplaceTag[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  isFlag       Boolean @default(false)
+  isWalletLock Boolean @default(false)
+  // NEW SMALL FIELDS
+  rootDomain   String?
+  // LEGACY FIELDS REMOVED IN PHASE 2.5 NORMALIZATION
+  // primaryCategoryKey String?
+  // primaryCategory    WebsiteCategoryKey?     @relation("WebsitePrimaryCategory", fields: [primaryCategoryKey], references: [id])
+  // secondaryCategoryKey String?
+  // secondaryCategory    WebsiteCategoryKey?   @relation("WebsiteSecondaryCategory", fields: [secondaryCategoryKey], references: [id])
+  // marketplaceTagKeys WebsiteMargetPlaceTag[]
+  language     String?
+  domainRating Int?
+
+  @@index([authorId])
+  @@index([marketplaceVisibilityStatus])
+  @@index([visibilityGraceEndsAt])
+  @@index([country])
+  @@index([language])
+  @@index([domainRating])
+}
+
+model WebsiteVerification {
+  id        String @id @default(uuid())
+  websiteId String
+
+  type           WebsiteVerificationType
+  verifiedBy     WebsiteVerificationBy     @default(AUTOMATIC)
+  verifiedAt     DateTime?
+  verifiedDomain String?
+  status         WebsiteVerificationStatus
+  errorMessage   String?
+  responseData   Json?
+
+  screenshotImageKey String?
+
+  requestedByUserId String?
+
+  manuallyReviewedByAdminUserId String?
+  manualReviewNotes             String?
+  rejectReason                  String?
+
+  website                 Website @relation(fields: [websiteId], references: [id], onDelete: Cascade)
+  manuallyReviewedByAdmin User?   @relation("AdminUserManualReviews", fields: [manuallyReviewedByAdminUserId], references: [id])
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([websiteId, type])
+  @@index([status])
+  @@index([websiteId])
+}
+
+model WebsiteVerificationConfig {
+  id                String @id @default("WEBSITE_VERIFICATION_CONFIG")
+  metaName          String @db.VarChar(100)
+  verificationToken String @db.VarChar(255)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+// LEGACY MODELS REMOVED IN PHASE 2.5 NORMALIZATION
+// WebsiteCategoryKey and WebsiteMargetPlaceTag are removed.
+
+enum WebsiteVerificationBy {
+  AUTOMATIC
+  MANUAL_BY_ADMIN
+}
+
+enum WebsiteVerificationType {
+  HTML_META_TAG
+  DNS_TXT_RECORD
+  SCREENSHOT_URL
+}
+
+enum WebsiteVerificationStatus {
+  PENDING
+  VERIFIED
+  VERIFICATION_FAILED
+  REQUESTED_FOR_MANUAL_REVIEW
+  APPEALED
+  REJECTED
+}

@@ -1,0 +1,7 @@
+requirement_id,source_document,source_section,requirement,hard_or_soft_rule,repository_evidence,runtime_entry_point,implementation_status,confidence,test_evidence,severity,gap_summary,recommended_action
+MC-001,MARKETPLACE CONTROL,2,Each interaction must store source target timestamp,Hard,prisma/schema/website.prisma,GET /provider-task/opportunities,IMPLEMENTED,HIGH,Yes,P0,None,None
+MC-002,MARKETPLACE CONTROL,3,Must execute at 3 validation stages,Hard,src/modules/task/market-algoritm/validation.engine.ts,ValidationEngine.validate(),PARTIALLY_IMPLEMENTED,MEDIUM,Yes,P0,Completion stage lacks strict validation transaction locking,Add locking around final validation
+QC-001,QUALITY CONTROL,3,Status field for websites,Soft,prisma/schema/website.prisma,QualityStatusEngine.update(),IMPLEMENTED,HIGH,Yes,P1,None,None
+IP-001,IMPLEMENTATION PLAN,6,Provider Opportunity API Runtime Flow,Mixed,src/modules/task/market-algoritm/ranking.service.ts,RankingService.rank(),IMPLEMENTED,HIGH,Yes,P1,None,None
+IP-003,IMPLEMENTATION PLAN,8,Taxonomy components exist,Hard,prisma/schema/marketplace.prisma,MarketplaceTag model,IMPLEMENTED,HIGH,Yes,P1,None,None
+MC-005,MARKETPLACE CONTROL,8,Transaction and concurrency enforcement,Hard,src/modules/task/market-algoritm/distribution-engine.service.ts,DistributionEngine,PARTIALLY_IMPLEMENTED,MEDIUM,No,P0,Transaction locks are missing on write increments,Implement row-level locking

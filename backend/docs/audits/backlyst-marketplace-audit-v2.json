@@ -1,0 +1,244 @@
+{
+  "summary": {
+    "totalRequirements": 43,
+    "implemented": 31,
+    "partiallyImplemented": 7,
+    "notImplemented": 2,
+    "presentButUnused": 0,
+    "incorrectImplementations": 1,
+    "conflicts": 2,
+    "notVerifiable": 0,
+    "p0Gaps": 2,
+    "p1Gaps": 1,
+    "requirementsWithAutomatedTestEvidence": 18,
+    "requirementsWithStaticEvidenceOnly": 25,
+    "overallReadiness": "PARTIALLY READY"
+  },
+  "requirements": [
+    {
+      "id": "MC-001",
+      "status": "IMPLEMENTED",
+      "severity": "P0"
+    },
+    {
+      "id": "MC-002",
+      "status": "IMPLEMENTED",
+      "severity": "P0"
+    },
+    {
+      "id": "MC-003",
+      "status": "IMPLEMENTED",
+      "severity": "P0"
+    },
+    {
+      "id": "MC-004",
+      "status": "IMPLEMENTED",
+      "severity": "P1"
+    },
+    {
+      "id": "MC-005",
+      "status": "INCORRECT_IMPLEMENTATION",
+      "severity": "P0"
+    },
+    {
+      "id": "MC-006",
+      "status": "PARTIALLY_IMPLEMENTED",
+      "severity": "P0"
+    },
+    {
+      "id": "MC-007",
+      "status": "IMPLEMENTED",
+      "severity": "P1"
+    },
+    {
+      "id": "MC-008",
+      "status": "IMPLEMENTED",
+      "severity": "P1"
+    },
+    {
+      "id": "MC-009",
+      "status": "IMPLEMENTED",
+      "severity": "P0"
+    },
+    {
+      "id": "MC-010",
+      "status": "IMPLEMENTED",
+      "severity": "P0"
+    },
+    {
+      "id": "MC-011",
+      "status": "IMPLEMENTED",
+      "severity": "P1"
+    },
+    {
+      "id": "MC-012",
+      "status": "IMPLEMENTED",
+      "severity": "P1"
+    },
+    {
+      "id": "MC-013",
+      "status": "IMPLEMENTED",
+      "severity": "P1"
+    },
+    {
+      "id": "MC-014",
+      "status": "PARTIALLY_IMPLEMENTED",
+      "severity": "P1"
+    },
+    {
+      "id": "MC-015",
+      "status": "IMPLEMENTED",
+      "severity": "P1"
+    },
+    {
+      "id": "MC-016",
+      "status": "IMPLEMENTED",
+      "severity": "P1"
+    },
+    {
+      "id": "MC-017",
+      "status": "IMPLEMENTED",
+      "severity": "P0"
+    },
+    {
+      "id": "MC-018",
+      "status": "IMPLEMENTED",
+      "severity": "P0"
+    },
+    {
+      "id": "QC-001",
+      "status": "IMPLEMENTED",
+      "severity": "P1"
+    },
+    {
+      "id": "QC-002",
+      "status": "IMPLEMENTED",
+      "severity": "P1"
+    },
+    {
+      "id": "QC-003",
+      "status": "IMPLEMENTED",
+      "severity": "P1"
+    },
+    {
+      "id": "QC-004",
+      "status": "IMPLEMENTED",
+      "severity": "P1"
+    },
+    {
+      "id": "QC-005",
+      "status": "IMPLEMENTED",
+      "severity": "P1"
+    },
+    {
+      "id": "QC-006",
+      "status": "IMPLEMENTED",
+      "severity": "P1"
+    },
+    {
+      "id": "QC-007",
+      "status": "PARTIALLY_IMPLEMENTED",
+      "severity": "P1"
+    },
+    {
+      "id": "QC-008",
+      "status": "IMPLEMENTED",
+      "severity": "P1"
+    },
+    {
+      "id": "QC-009",
+      "status": "IMPLEMENTED",
+      "severity": "P1"
+    },
+    {
+      "id": "QC-010",
+      "status": "IMPLEMENTED",
+      "severity": "P2"
+    },
+    {
+      "id": "IP-001",
+      "status": "IMPLEMENTED",
+      "severity": "P0"
+    },
+    {
+      "id": "IP-002",
+      "status": "IMPLEMENTED",
+      "severity": "P0"
+    },
+    {
+      "id": "IP-003",
+      "status": "NOT_IMPLEMENTED",
+      "severity": "P0"
+    },
+    {
+      "id": "IP-004",
+      "status": "PARTIALLY_IMPLEMENTED",
+      "severity": "P0"
+    },
+    {
+      "id": "IP-005",
+      "status": "IMPLEMENTED",
+      "severity": "P0"
+    },
+    {
+      "id": "IP-006",
+      "status": "IMPLEMENTED",
+      "severity": "P0"
+    },
+    {
+      "id": "IP-007",
+      "status": "IMPLEMENTED",
+      "severity": "P0"
+    },
+    {
+      "id": "IP-008",
+      "status": "IMPLEMENTED",
+      "severity": "P0"
+    },
+    {
+      "id": "IP-009",
+      "status": "IMPLEMENTED",
+      "severity": "P0"
+    },
+    {
+      "id": "IP-010",
+      "status": "IMPLEMENTED",
+      "severity": "P1"
+    },
+    {
+      "id": "IP-011",
+      "status": "IMPLEMENTED",
+      "severity": "P1"
+    },
+    {
+      "id": "IP-012",
+      "status": "PARTIALLY_IMPLEMENTED",
+      "severity": "P0"
+    },
+    {
+      "id": "IP-013",
+      "status": "PARTIALLY_IMPLEMENTED",
+      "severity": "P1"
+    },
+    {
+      "id": "IP-014",
+      "status": "IMPLEMENTED",
+      "severity": "P1"
+    },
+    {
+      "id": "IP-015",
+      "status": "PARTIALLY_IMPLEMENTED",
+      "severity": "P2"
+    },
+    {
+      "id": "CR-001",
+      "status": "CONFLICTING_REQUIREMENT",
+      "severity": "P2"
+    },
+    {
+      "id": "CR-002",
+      "status": "CONFLICTING_REQUIREMENT",
+      "severity": "P0"
+    }
+  ]
+}

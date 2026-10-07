@@ -1,0 +1,62 @@
+# Feature Status
+
+This is a short snapshot of the current Backlyst backend feature status.
+
+## Completed
+
+- Auth system: login, profile, role-aware guards, public subscription-plan listing.
+- User profile: profile update with image upload and signed S3 URL response.
+- Website module: website CRUD/listing, owner website fetch, verification-related flows.
+- Messaging system:
+  - userId-based direct and task-aware chat
+  - HTTP send/fetch/delete
+  - WebSocket messaging
+  - Redis Pub/Sub realtime fanout across instances
+  - BullMQ message queue flow
+  - message report flow
+  - admin message registry and report review APIs
+  - cursor pagination and cache separation for direct vs task chat
+- Notification system:
+  - in-app notifications for USER and ADMIN
+  - notification preferences
+  - BullMQ + Redis Pub/Sub + WebSocket realtime delivery
+  - task notification triggers wired into requester/provider/admin task flows
+- Task management core:
+  - requester create/select/review/cancel/deadline flows
+  - provider apply/start/submit/resubmit/respond-cancel flows
+  - admin task oversight and task lifecycle actions
+  - task timeline and deadline history APIs
+- Task activity standardization:
+  - structured TaskFlow event system
+  - centralized TaskFlowService
+  - event keys, actor roles, metadata support
+- Credits and rewards core:
+  - task credit deduct/refund/reward-provider APIs
+  - verified placement processing
+  - weekly contribution rewards
+  - milestone rewards
+  - website activity streak tracking and maintenance
+- Dashboards and analytics:
+  - provider dashboard summary + activity feed
+  - requester dashboard summary
+  - admin task analytics endpoints
+  - admin analytics/report registry foundation
+- Rewards system:
+  - badge definitions/admin CRUD
+  - reward profile and ledger APIs
+  - badge evaluation engine
+  - reward outbox processing and stale recovery
+- Community showcase:
+  - public showcase sections API
+  - filter-based public showcase API
+  - public member profile API
+  - public website profile API
+  - admin showcase management APIs
+  - snapshot-based rankings and scheduled refresh
+- File handling:
+  - centralized S3 service usage
+  - signed URL support for file access
+- Deployment foundation:
+  - Docker + compose setup
+  - Nginx reverse proxy config
+  - Redis/Postgres/backend container wiring

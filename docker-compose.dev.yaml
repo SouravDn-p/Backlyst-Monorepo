@@ -1,0 +1,171 @@
+# ==============================================================================
+# Backlyst - Full Local Development Docker Compose Stack
+# Run everything locally: Postgres, Redis, MinIO (S3), Backend, Frontend, Admin
+# ==============================================================================
+# Usage:
+#   docker compose -f docker-compose.dev.yaml up -d
+# ==============================================================================
+
+services:
+  # 1. PostgreSQL Database
+  postgres:
+    image: postgres:17-alpine
+    container_name: backlyst-local-postgres
+    profiles: [prod, dev, postgres, full]
+    restart: always
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+      POSTGRES_DB: ${POSTGRES_DB:-backlyst_db}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - backlystapp
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres} -d ${POSTGRES_DB:-backlyst_db}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # 2. Redis Cache & BullMQ
+  redis:
+    image: redis:7-alpine
+    container_name: backlyst-local-redis
+    profiles: [prod, dev, redis, full]
+    restart: always
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - backlystapp
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # 3. MinIO S3-Compatible Object Storage
+  minio:
+    image: minio/minio:latest
+    container_name: backlyst-local-minio
+    profiles: [prod, dev, minio, full]
+    restart: always
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-minioadmin}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-minioadmin}
+    ports:
+      - "9000:9000" # S3 API endpoint
+      - "9001:9001" # MinIO Web Console (http://localhost:9001)
+    volumes:
+      - minio_data:/data
+    networks:
+      - backlystapp
+    healthcheck:
+      test: ["CMD", "mc", "ready", "local"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # 4. Auto-create default MinIO Bucket on startup
+  minio-init:
+    image: minio/mc:latest
+    container_name: backlyst-local-minio-init
+    profiles: [prod, dev, minio, full]
+    depends_on:
+      minio:
+        condition: service_healthy
+    networks:
+      - backlystapp
+    entrypoint: >
+      /bin/sh -c "
+      /usr/bin/mc alias set myminio http://minio:9000 ${MINIO_ROOT_USER:-minioadmin} ${MINIO_ROOT_PASSWORD:-minioadmin};
+      /usr/bin/mc mb --ignore-existing myminio/${AWS_S3_BUCKET:-backlyst-storage};
+      /usr/bin/mc anonymous set download myminio/${AWS_S3_BUCKET:-backlyst-storage};
+      echo 'MinIO bucket initialized successfully!';
+      exit 0;
+      "
+
+  # 5. Backend Service
+  backend:
+    image: ghcr.io/backlyst/backlystapp-backend:dev
+    container_name: backlyst-local-backend
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    restart: always
+    profiles: [prod, dev, backend, full]
+    ports:
+      - "5000:5000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    env_file:
+      - .env
+    environment:
+      - NODE_ENV=development
+      - PORT=5000
+      - DATABASE_URL=postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@postgres:5432/${POSTGRES_DB:-backlyst_db}?schema=public
+      - REDIS_URL=redis://redis:6379
+      - AWS_ACCESS_KEY_ID=${MINIO_ROOT_USER:-minioadmin}
+      - AWS_SECRET_ACCESS_KEY=${MINIO_ROOT_PASSWORD:-minioadmin}
+      - AWS_REGION=us-east-1
+      - AWS_S3_BUCKET=${AWS_S3_BUCKET:-backlyst-storage}
+      - AWS_S3_ENDPOINT=http://minio:9000
+      - AWS_S3_PUBLIC_ENDPOINT=http://localhost:9000
+      - AWS_S3_FORCE_PATH_STYLE=true
+    networks:
+      - backlystapp
+
+  # 6. Frontend Service (Next.js)
+  frontend:
+    image: ghcr.io/backlyst/backlystapp-frontend:dev
+    container_name: backlyst-local-frontend
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    restart: always
+    profiles: [prod, dev, frontend, full]
+    ports:
+      - "3000:3000"
+    depends_on:
+      - backend
+    environment:
+      - NODE_ENV=development
+      - PORT=3000
+      - NEXT_PUBLIC_API_BASE_URL=http://localhost:5000
+    networks:
+      - backlystapp
+
+  # 7. Admin Dashboard Service (React Vite)
+  dashboard:
+    image: ghcr.io/backlyst/backlystapp-dashboard:dev
+    container_name: backlyst-local-dashboard
+    build:
+      context: ./admin-dashboard
+      dockerfile: Dockerfile
+    restart: always
+    profiles: [prod, dev, dashboard, full]
+    ports:
+      - "3043:80"
+    environment:
+      - VITE_API_BASE_URL=http://localhost:5000
+    networks:
+      - backlystapp
+
+networks:
+  backlystapp:
+    driver: bridge
+
+volumes:
+  postgres_data:
+    driver: local
+  redis_data:
+    driver: local
+  minio_data:
+    driver: local

@@ -1,0 +1,29 @@
+<h2>Website Verification Rejected</h2>
+
+<p>Hello {{ownerName}},</p>
+
+<p>We reviewed your website verification request, but we were unable to approve it at this time.</p>
+
+<p>
+  Website: {{websiteName}}<br />
+  Website URL: <a href='{{websiteUrl}}'>{{websiteUrl}}</a>
+</p>
+
+<p>
+  Rejection Reason:<br />
+  {{rejectionReason}}
+</p>
+
+{{#if manualReviewNotes}}
+  <p>
+    Additional Notes:<br />
+    {{manualReviewNotes}}
+  </p>
+{{/if}}
+
+<p>Please review the issue above and submit a new verification request after making the necessary update.</p>
+
+<p>
+  Thank you,<br />
+  The Backlyst Team
+</p>

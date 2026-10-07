@@ -1,0 +1,18 @@
+model BlogPost {
+  id          String    @id @default(uuid())
+  title       String
+  subtitle    String?
+  thumbnail   String?
+  tags        String[]  @default([])
+  category    String?
+  publishedAt DateTime? @default(now())
+
+  blocks Json
+
+  authorId  String
+  author    User     @relation(fields: [authorId], references: [id])
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([publishedAt])
+}

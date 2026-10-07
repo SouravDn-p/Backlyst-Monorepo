@@ -1,0 +1,50 @@
+<div class="content-title">
+  Account Suspended
+</div>
+
+<div class="content-copy mt-8">
+  Your account has been temporarily suspended due to a violation of our platform policies.
+  During this period, access to your account will be restricted.
+</div>
+
+<div class="message-box mt-20">
+  <div class="label mb-8">Reason for suspension</div>
+  <div class="content-copy">
+    {{reason}}
+  </div>
+</div>
+
+<div class="mt-24">
+  <div class="row">
+    <div class="label">Suspension Start</div>
+    <div class="content-copy">
+      {{suspendStart}}
+    </div>
+  </div>
+
+  <div class="row mt-10">
+    <div class="label">Suspension End</div>
+    <div class="content-copy">
+      {{suspendEnd}}
+    </div>
+  </div>
+
+  {{#if durationInDays}}
+  <div class="row mt-10">
+    <div class="label">Duration</div>
+    <div class="content-copy">
+      {{durationInDays}} day(s)
+    </div>
+  </div>
+  {{/if}}
+</div>
+
+<div class="content-copy mt-28">
+  If you believe this was a mistake, you can contact our support team for review.
+</div>
+
+<div class="mt-18">
+  <a class="link" href="{{supportUrl}}">
+    Contact Support
+  </a>
+</div>

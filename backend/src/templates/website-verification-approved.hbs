@@ -1,0 +1,24 @@
+<h2>Website Verification Approved</h2>
+
+<p>Hello {{ownerName}},</p>
+
+<p>Your website verification request has been approved.</p>
+
+<p>
+  Website: {{websiteName}}<br />
+  Website URL: <a href='{{websiteUrl}}'>{{websiteUrl}}</a>
+</p>
+
+{{#if manualReviewNotes}}
+  <p>
+    Admin Notes:<br />
+    {{manualReviewNotes}}
+  </p>
+{{/if}}
+
+<p>Your verified status is now active.</p>
+
+<p>
+  Thank you,<br />
+  The Backlyst Team
+</p>

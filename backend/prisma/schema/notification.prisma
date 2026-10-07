@@ -1,0 +1,160 @@
+enum NotificationAudience {
+  USER
+  ADMIN
+}
+
+enum NotificationCategory {
+  TASK_STATUS
+  CREDIT_BALANCE
+  DISPUTE_REVIEW
+  SYSTEM_ANNOUNCEMENT
+  MESSAGE
+  REWARD
+  MARKETPLACE
+  SECURITY
+  ADMIN_LEDGER
+  ADMIN_GOVERNANCE
+  ADMIN_RISK
+  ADMIN_SYSTEM
+}
+
+enum NotificationPriority {
+  LOW
+  NORMAL
+  HIGH
+  URGENT
+}
+
+enum NotificationStatus {
+  UNREAD
+  READ
+}
+
+enum NotificationDeliveryStatus {
+  PENDING
+  DELIVERED
+  FAILED
+  SKIPPED
+}
+
+enum NotificationEntityType {
+  USER
+  WEBSITE
+  TASK
+  APPLICATION
+  CREDIT
+  MESSAGE
+  REPORT
+  REWARD
+  BADGE
+  MARKETPLACE
+  SYSTEM
+  LEDGER
+  AUDIT
+}
+
+enum NotificationType {
+  TASK_CREATED
+  TASK_APPLICATION_RECEIVED
+  TASK_PROVIDER_SELECTED
+  TASK_STARTED
+  TASK_PROOF_SUBMITTED
+  TASK_REVISION_REQUESTED
+  TASK_APPROVED
+  TASK_REJECTED
+  TASK_CANCELLED
+  TASK_CANCELLATION_REQUESTED
+  TASK_CANCELLATION_REQUEST_REJECTED
+  TASK_DEADLINE_EXTENSION_REQUESTED
+  TASK_DEADLINE_EXTENSION_APPROVED
+  TASK_DEADLINE_EXTENSION_REJECTED
+  TASK_STATUS_UPDATED
+  TASK_DISPUTED
+  TASK_COMPLETED
+  DIRECT_TASK_REQUEST_RECEIVED
+  DIRECT_TASK_REQUEST_ACCEPTED
+  DIRECT_TASK_REQUEST_REJECTED
+  DIRECT_TASK_REQUEST_CANCELLED
+  CREDIT_DEDUCTED
+  CREDIT_REFUNDED
+  CREDIT_REWARDED
+  CREDIT_LOW_BALANCE
+  MESSAGE_RECEIVED
+  MESSAGE_REPORTED
+  REWARD_EARNED
+  BADGE_UNLOCKED
+  MILESTONE_REACHED
+  STREAK_UPDATED
+  WEEKLY_CONTRIBUTION_REWARDED
+  MARKETPLACE_NEW_OPPORTUNITY
+  MARKETPLACE_LOW_ACTIVITY_REMINDER
+  MARKETPLACE_FIRST_SUCCESS
+  WEBSITE_VERIFIED
+  WEBSITE_REJECTED
+  WEBSITE_FLAGGED
+  WEBSITE_VISIBILITY_EXPIRING
+  WEBSITE_VISIBILITY_EXPIRED
+  SYSTEM_ANNOUNCEMENT
+  ADMIN_CREDIT_LEDGER_ALERT
+  ADMIN_DISPUTE_OPENED
+  ADMIN_DISPUTE_ESCALATED
+  ADMIN_MESSAGE_REPORTED
+  ADMIN_MESSAGE_RESTRICTED
+  ADMIN_WEBSITE_FLAGGED
+  ADMIN_TASK_RISK_FLAGGED
+  ADMIN_MARKETPLACE_RISK_FLAGGED
+  ADMIN_LOW_LIQUIDITY_ALERT
+  ADMIN_SUPPLY_DEMAND_IMBALANCE
+  ADMIN_SYSTEM_HEALTH_ALERT
+  ADMIN_AUDIT_EVENT
+}
+
+model Notification {
+  id             String                     @id @default(uuid())
+  recipientId    String
+  actorId        String?
+  audience       NotificationAudience
+  type           NotificationType
+  category       NotificationCategory
+  priority       NotificationPriority       @default(NORMAL)
+  title          String
+  body           String?
+  data           Json?
+  entityType     NotificationEntityType?
+  entityId       String?
+  status         NotificationStatus         @default(UNREAD)
+  deliveryStatus NotificationDeliveryStatus @default(PENDING)
+  deliveredAt    DateTime?
+  readAt         DateTime?
+  idempotencyKey String?
+  createdAt      DateTime                   @default(now())
+  updatedAt      DateTime                   @updatedAt
+
+  recipient User  @relation("UserNotificationsReceived", fields: [recipientId], references: [id], onDelete: Cascade)
+  actor     User? @relation("UserNotificationsActed", fields: [actorId], references: [id], onDelete: SetNull)
+
+  @@unique([recipientId, idempotencyKey])
+  @@index([recipientId, createdAt])
+  @@index([recipientId, status])
+  @@index([audience, createdAt])
+  @@index([category, createdAt])
+  @@index([priority, createdAt])
+  @@index([type, createdAt])
+  @@index([entityType, entityId])
+  @@index([deliveryStatus, createdAt])
+  @@index([idempotencyKey])
+}
+
+model NotificationPreference {
+  id                         String   @id @default(uuid())
+  userId                     String   @unique
+  taskStatusUpdates          Boolean  @default(true)
+  creditBalanceAlerts        Boolean  @default(true)
+  disputeReviewNotifications Boolean  @default(true)
+  systemAnnouncements        Boolean  @default(false)
+  contactPreferenceTags      Json?
+  createdAt                  DateTime @default(now())
+  updatedAt                  DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}

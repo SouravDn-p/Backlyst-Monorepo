@@ -1,0 +1,117 @@
+pipeline {
+    agent {
+        docker {
+            image 'node:20-alpine'
+            args '-u root'
+            reuseNode true
+        }
+    }
+
+    options {
+        skipDefaultCheckout(true)
+    }
+
+    environment {
+        SSH_HOST = "3.7.116.63"
+        SSH_CREDENTIALS_ID = "tom-ssh-creds"
+        SERVER_PATH = "/var/www/dist"
+    }
+
+    stages {
+        stage('Checkout Code') {
+            steps {
+                sh 'find . -mindepth 1 -delete 2>/dev/null || true'
+                checkout scm
+            }
+        }
+
+        stage('Prepare Tools') {
+            steps {
+                sh '''
+                    echo "Installing SSH client..."
+                    apk add --no-cache openssh-client
+                    echo "SSH client installed."
+                '''
+            }
+        }
+
+        stage('Install Dependencies') {
+            steps {
+                sh '''
+                    echo "Installing dependencies..."
+                    npm ci
+                    echo "Dependencies installed successfully."
+                '''
+            }
+        }
+
+        stage('Build') {
+            steps {
+                sh '''
+                    echo "Building React app..."
+                    npm run build
+                    echo "Build completed successfully."
+                '''
+            }
+        }
+
+        stage('Clear Server Path') {
+            steps {
+                withCredentials([sshUserPrivateKey(
+                    credentialsId: env.SSH_CREDENTIALS_ID,
+                    keyFileVariable: 'SSH_KEY',
+                    usernameVariable: 'SSH_USER'
+                )]) {
+                    sh '''
+                        echo "Clearing $SERVER_PATH on server..."
+                        chmod 600 "$SSH_KEY"
+                        ssh -i "$SSH_KEY" \
+                            -o BatchMode=yes \
+                            -o IdentitiesOnly=yes \
+                            -o StrictHostKeyChecking=no \
+                            "$SSH_USER@$SSH_HOST" \
+                            "sudo mkdir -p '$SERVER_PATH' && sudo find '$SERVER_PATH' -mindepth 1 -delete"
+                        echo "$SERVER_PATH cleared successfully."
+                    '''
+                }
+            }
+        }
+
+        stage('Deploy to VPS') {
+            steps {
+                withCredentials([sshUserPrivateKey(
+                    credentialsId: env.SSH_CREDENTIALS_ID,
+                    keyFileVariable: 'SSH_KEY',
+                    usernameVariable: 'SSH_USER'
+                )]) {
+                    sh '''
+                        echo "Uploading dist to $SERVER_PATH on server..."
+                        chmod 600 "$SSH_KEY"
+                        tar -C dist -czf - . | ssh -i "$SSH_KEY" \
+                            -o BatchMode=yes \
+                            -o IdentitiesOnly=yes \
+                            -o StrictHostKeyChecking=no \
+                            "$SSH_USER@$SSH_HOST" \
+                            "sudo tar -xzf - -C '$SERVER_PATH'"
+                        echo "Deployment completed on server."
+                    '''
+                }
+            }
+        }
+    }
+
+    post {
+        always {
+            sh 'chmod -R 777 . 2>/dev/null || true'
+            echo "Pipeline execution finished."
+        }
+
+        success {
+            echo "Deployment successful 🚀"
+        }
+
+        failure {
+            echo "Pipeline failed ❌"
+        }
+    }
+}

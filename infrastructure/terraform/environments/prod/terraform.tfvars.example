@@ -1,0 +1,101 @@
+# AWS Provider & Project Settings
+aws_region   = "eu-west-2"
+aws_profile  = "" # Leave empty when using temporary STS session credentials
+project_name = "backlyst"
+environment  = "prod"
+
+# Custom 3-Tier VPC Settings
+vpc_cidr                 = "10.0.0.0/16"
+public_subnet_cidrs      = ["10.0.1.0/24", "10.0.2.0/24"]
+private_app_subnet_cidrs = ["10.0.10.0/24", "10.0.11.0/24"]
+private_db_subnet_cidrs  = ["10.0.20.0/24", "10.0.21.0/24"]
+enable_nat_gateway       = true
+single_nat_gateway       = true # Set to false for Multi-AZ NAT Gateway high-availability
+
+# Domain & DNS
+domain_name     = "backlyst.co.uk"
+api_subdomain   = "api"
+admin_subdomain = "admin"
+
+# Zoho Mail & DNS Configuration
+enable_zoho_mail = true
+zoho_mx_records = [
+  "10 mx.zoho.com",
+  "20 mx2.zoho.com",
+  "50 mx3.zoho.com"
+]
+zoho_spf_record     = "v=spf1 include:dc-8e814c8572._spfm.backlyst.co.uk ~all"
+extra_txt_records   = {}
+extra_cname_records = {}
+
+
+# AWS Simple Email Service (SES) Configuration
+enable_ses              = true
+ses_enable_mail_from    = true
+ses_mail_from_subdomain = "mail"
+ses_enable_dmarc        = true
+ses_dmarc_policy        = "v=DMARC1; p=none; sp=none; aspf=r; adkim=r;"
+ses_create_smtp_user    = true
+
+# Application Ports & Health Checks
+backend_port              = 5000
+nextjs_port               = 3000
+admin_port                = 3043
+backend_health_check_path = "/health"
+nextjs_health_check_path  = "/"
+admin_health_check_path   = "/"
+
+# EC2 Compute Settings
+backend_instance_type     = "t3.small"
+frontend_instance_type    = "t3.small"
+backend_ami_id            = ""
+frontend_ami_id           = ""
+ssh_key_name              = ""
+backend_root_volume_size  = 20
+frontend_root_volume_size = 20
+
+# S3 Storage Settings
+s3_bucket_name = "backlyst-prod-storage-bucket"
+
+# Secrets Manager Settings
+secret_name = ""
+
+# RDS PostgreSQL Database Settings
+rds_engine_version             = "17"
+rds_instance_class             = "db.t3.micro"
+rds_allocated_storage          = 20
+rds_storage_type               = "gp3"
+rds_db_name                    = "backlyst_db"
+rds_db_username                = "backlyst_user"
+rds_db_password                = "CHANGE_ME_IN_PRODUCTION"
+rds_publicly_accessible        = false
+rds_skip_final_snapshot        = false
+rds_deletion_protection        = true
+rds_backup_retention_period    = 7
+rds_auto_minor_version_upgrade = true
+rds_apply_immediately          = false
+rds_storage_encrypted          = true
+rds_multi_az                   = false
+
+# ElastiCache Redis / Valkey Settings
+elasticache_cache_name               = "backlyst-prod-cache"
+elasticache_engine                   = "valkey"
+elasticache_major_engine_version     = "8"
+elasticache_max_storage_gb           = 1
+elasticache_max_ecpu_per_second      = 1000
+elasticache_snapshot_retention_limit = 1
+
+# ECR Settings
+ecr_repository_names           = ["backend", "frontend", "admin-dashboard"]
+ecr_image_tag_mutability       = "MUTABLE"
+ecr_scan_on_push               = true
+ecr_force_delete               = false # Retain production repositories
+ecr_untagged_image_expiry_days = 14
+ecr_max_tagged_image_count     = 30
+
+# GitHub Actions CI/CD & IAM Settings
+enable_github_actions_ecr_role = true
+github_repository              = "backlyst/backlystapp" # Format: org/repo
+github_branches                = ["main"]
+create_github_oidc_provider    = true # Set false if an OIDC provider for token.actions.githubusercontent.com already exists
+

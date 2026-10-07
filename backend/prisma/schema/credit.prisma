@@ -1,0 +1,316 @@
+enum CreditType {
+  SUBSCRIPTION_TASK
+  EARNED_TASK
+  VISIBILITY
+}
+
+enum CreditAction {
+  ADD
+  SPEND
+  EXPIRE
+  REFUND
+  REWARD
+}
+
+enum CreditReason {
+  SUBSCRIPTION_PURCHASE
+  TASK_COMPLETION
+  TASK_POST
+  REJECTED_TASK
+  FAILED_TASK
+  WEEKLY_BACKLINK_CONTRIBUTION
+  MILESTONE_VERIFIED_BACKLINK
+  WEEKLY_CONTRIBUTION_REWARD
+  MILESTONE_VERIFIED_PLACEMENT
+  REFERRAL_WEBSITE_VERIFIED
+  REFERRAL_FIRST_BACKLINK
+  REFERRAL_PAID_SUBSCRIPTION
+  MANUAL
+}
+
+enum ReferralStage {
+  SIGNED_UP
+  WEBSITE_VERIFIED
+  FIRST_BACKLINK_ACCEPTED
+  PAID_SUBSCRIPTION
+}
+
+enum ReferralAttributionStatus {
+  PENDING
+  VERIFIED
+  FLAGGED
+  REVOKED
+}
+
+enum ReferralSource {
+  WEBSITE_INTEGRATION
+  DIRECT_REFERRAL
+  MARKETPLACE_TASK
+}
+
+enum CreditWalletType {
+  SUBSCRIPTION
+  PURCHASED
+  REFERRAL
+  EARNED
+}
+
+enum AdminCreditAdjustmentType {
+  TASK_CREDIT
+  VISIBILITY_CREDIT
+}
+
+enum AdminCreditAdjustmentAction {
+  ADD
+  DEDUCT
+  REVERSE
+}
+
+model UserCreditWallet {
+  id                      String   @id @default(cuid())
+  userId                  String   @unique
+  subscriptionTaskCredits Int      @default(0)
+  earnedTaskCredits       Int      @default(0)
+  purchasedTaskCredits    Int      @default(0)
+  referralTaskCredits     Int      @default(0)
+  visibilityCredits       Int      @default(0)
+  createdAt               DateTime @default(now())
+  updatedAt               DateTime @updatedAt
+
+  user                      User                      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  subscriptionCreditBatches SubscriptionCreditBatch[]
+  creditLogs                CreditLog[]
+}
+
+model WebsiteCreditWallet {
+  id                        String    @id @default(cuid())
+  websiteId                 String    @unique
+  subscriptionTaskCredits   Int       @default(0)
+  earnedTaskCredits         Int       @default(0)
+  allocatedPurchasedCredits Int       @default(0)
+  allocatedReferralCredits  Int       @default(0)
+  visibilityCredits         Int       @default(0)
+  visibilityActiveUntil     DateTime?
+  createdAt                 DateTime  @default(now())
+  updatedAt                 DateTime  @updatedAt
+
+  website Website @relation(fields: [websiteId], references: [id], onDelete: Cascade)
+
+  @@index([websiteId])
+}
+
+model SubscriptionCreditBatch {
+  id               String   @id @default(cuid())
+  walletId         String
+  userId           String
+  subscriptionId   String?
+
+  // One Stripe invoice can grant only one batch; this makes webhook retries safe.
+  stripeInvoiceId  String?  @unique
+
+  // Credits belong to this paid billing period and expire with that period.
+  periodStart      DateTime?
+  periodEnd        DateTime?
+  totalCredits     Int
+  remainingCredits Int
+  expiresAt        DateTime
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  wallet       UserCreditWallet @relation(fields: [walletId], references: [id], onDelete: Cascade)
+  user         User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  subscription Subscription?    @relation(fields: [subscriptionId], references: [id], onDelete: SetNull)
+  creditLogs   CreditLog[]
+
+  @@index([walletId])
+  @@index([userId])
+  @@index([subscriptionId])
+  @@index([expiresAt])
+}
+
+model CreditLog {
+  id                        String                 @id @default(cuid())
+  walletId                  String
+  userId                    String
+  creditType                CreditType
+  action                    CreditAction
+  reason                    CreditReason
+  amount                    Int
+  balanceBefore             Int
+  balanceAfter              Int
+  websiteId                 String?
+  taskId                    String?
+  referralId                String?
+  subscriptionId            String?
+  subscriptionCreditBatchId String?
+  note                      String?
+  createdAt                 DateTime               @default(now())
+  actorId                   String?
+  actor                     User?                  @relation("CreditLogActor", fields: [actorId], references: [id], onDelete: SetNull)
+  adminAdjustment           AdminCreditAdjustment?
+  dispute                   Dispute?               @relation("DisputeCreditAdjustment")
+
+  wallet                  UserCreditWallet         @relation(fields: [walletId], references: [id], onDelete: Cascade)
+  user                    User                     @relation("UserCreditLogs", fields: [userId], references: [id], onDelete: Cascade)
+  website                 Website?                 @relation("WebsiteCreditLogs", fields: [websiteId], references: [id], onDelete: SetNull)
+  task                    PlacementTask?           @relation("PlacementTaskCreditLogs", fields: [taskId], references: [id], onDelete: SetNull)
+  referral                UserReferral?            @relation(fields: [referralId], references: [id], onDelete: SetNull)
+  subscription            Subscription?            @relation("SubscriptionCreditLogs", fields: [subscriptionId], references: [id], onDelete: SetNull)
+  subscriptionCreditBatch SubscriptionCreditBatch? @relation(fields: [subscriptionCreditBatchId], references: [id], onDelete: SetNull)
+  directTaskRequestId     String?
+  directTaskRequest       DirectTaskRequest?       @relation("DirectTaskRequestCreditLogs", fields: [directTaskRequestId], references: [id], onDelete: SetNull)
+
+  @@index([actorId])
+  @@index([walletId, createdAt])
+  @@index([userId, createdAt])
+  @@index([creditType, createdAt])
+  @@index([reason, createdAt])
+  @@index([websiteId])
+  @@index([taskId])
+  @@index([referralId])
+  @@index([subscriptionId])
+}
+
+model UserReferral {
+  id                 String                    @id @default(cuid())
+  referrerUserId     String
+  referredUserId     String                    @unique
+  referredWebsiteId  String?
+  subscriptionId     String?
+  codeUsed           String
+  currentStage       ReferralStage             @default(SIGNED_UP)
+  status             ReferralAttributionStatus @default(PENDING)
+  source             ReferralSource            @default(DIRECT_REFERRAL)
+  signedUpAt         DateTime                  @default(now())
+  websiteVerifiedAt  DateTime?
+  firstBacklinkAt    DateTime?
+  paidSubscriptionAt DateTime?
+  approvedAt         DateTime?
+  approvedById       String?
+  revokedAt          DateTime?
+  revokedById        String?
+  revokeReason       String?
+  flaggedAt          DateTime?
+  flagReason         String?
+  frozenAt           DateTime?
+  freezeReason       String?
+  createdAt          DateTime                  @default(now())
+  updatedAt          DateTime                  @updatedAt
+
+  referrerUser    User                    @relation("ReferrerUser", fields: [referrerUserId], references: [id], onDelete: Cascade)
+  referredUser    User                    @relation("ReferredUser", fields: [referredUserId], references: [id], onDelete: Cascade)
+  referredWebsite Website?                @relation("ReferralWebsite", fields: [referredWebsiteId], references: [id], onDelete: SetNull)
+  subscription    Subscription?           @relation("ReferralSubscription", fields: [subscriptionId], references: [id], onDelete: SetNull)
+  approvedBy      User?                   @relation("ReferralApprovedBy", fields: [approvedById], references: [id], onDelete: SetNull)
+  revokedBy       User?                   @relation("ReferralRevokedBy", fields: [revokedById], references: [id], onDelete: SetNull)
+  rewards         ReferralReward[]
+  creditLogs      CreditLog[]
+  adminAuditLogs  AdminReferralAuditLog[]
+
+  @@index([referrerUserId])
+  @@index([referredWebsiteId])
+  @@index([subscriptionId])
+  @@index([currentStage])
+  @@index([status])
+  @@index([source])
+  @@index([approvedById])
+  @@index([revokedById])
+}
+
+model ReferralReward {
+  id                        String        @id @default(cuid())
+  referralId                String
+  stage                     ReferralStage
+  referrerTaskCredits       Int           @default(0)
+  referrerVisibilityCredits Int           @default(0)
+  referredTaskCredits       Int           @default(0)
+  referredVisibilityCredits Int           @default(0)
+  createdAt                 DateTime      @default(now())
+
+  referral UserReferral @relation(fields: [referralId], references: [id], onDelete: Cascade)
+
+  @@unique([referralId, stage])
+}
+
+model ReferralRewardConfig {
+  id                       String   @id @default("REFERRAL_REWARD_CONFIG")
+  rewardPerReferralCredits Int      @default(150)
+  maxUserReferralPool      Int      @default(5000)
+  oneCreditPerUserEnforced Boolean  @default(true)
+  createdAt                DateTime @default(now())
+  updatedAt                DateTime @updatedAt
+}
+
+model PlatformFeatureToggle {
+  key       String   @id
+  label     String
+  category  String?
+  enabled   Boolean  @default(false)
+  note      String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model AdminCreditAdjustment {
+  id             String                      @id @default(cuid())
+  adminId        String
+  websiteId      String
+  creditLogId    String                      @unique
+  type           AdminCreditAdjustmentType
+  action         AdminCreditAdjustmentAction @default(ADD)
+  amount         Int
+  visibilityDays Int?
+  reason         String
+  idempotencyKey String                      @unique
+  createdAt      DateTime                    @default(now())
+
+  admin     User      @relation("AdminCreditAdjustments", fields: [adminId], references: [id])
+  website   Website   @relation(fields: [websiteId], references: [id])
+  creditLog CreditLog @relation(fields: [creditLogId], references: [id])
+
+  @@index([adminId, createdAt])
+  @@index([websiteId, createdAt])
+}
+
+model WebsiteWalletLockAudit {
+  id        String   @id @default(cuid())
+  adminId   String
+  websiteId String
+  locked    Boolean
+  reason    String
+  createdAt DateTime @default(now())
+
+  admin   User    @relation("WebsiteWalletLockAdmin", fields: [adminId], references: [id])
+  website Website @relation(fields: [websiteId], references: [id])
+
+  @@index([adminId, createdAt])
+  @@index([websiteId, createdAt])
+}
+
+model AdminReferralAuditLog {
+  id             String   @id @default(cuid())
+  referralId     String?
+  adminId        String
+  action         String
+  reason         String
+  idempotencyKey String?  @unique
+  metadata       Json?
+  createdAt      DateTime @default(now())
+
+  referral UserReferral? @relation(fields: [referralId], references: [id], onDelete: SetNull)
+  admin    User          @relation("AdminReferralAuditAdmin", fields: [adminId], references: [id], onDelete: Cascade)
+
+  @@index([referralId, createdAt])
+  @@index([adminId, createdAt])
+}
+
+model ReferralProgramConfig {
+  id              String    @id @default("platform")
+  referralsFrozen Boolean   @default(false)
+  freezeReason    String?
+  frozenById      String?
+  frozenAt        DateTime?
+  updatedAt       DateTime  @updatedAt
+
+  frozenBy User? @relation("ReferralProgramFrozenBy", fields: [frozenById], references: [id], onDelete: SetNull)
+}

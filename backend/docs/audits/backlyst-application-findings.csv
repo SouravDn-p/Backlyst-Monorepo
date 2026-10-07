@@ -1,0 +1,2 @@
+finding_id,area,title,status,severity,confidence,evidence,runtime_impact,recommended_action,dependencies
+APP-TEST-001,Testing,"PostgreSQL Environment Block in Sandbox",WARNING,P1,HIGH,"domain-interaction-recorder.concurrency.spec.ts fails locally with PG connection refused","Tests cannot verify isolation locally.","Configure test database in CI or mock environment.",""

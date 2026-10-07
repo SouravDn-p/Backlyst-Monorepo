@@ -1,0 +1,450 @@
+enum BadgeCategory {
+  MARKETPLACE
+  KICKSTARTER
+  HALL_OF_FAME
+  ADMIN_FEATURED
+}
+
+enum BadgeScope {
+  USER_PROFILE
+  PROVIDER_PROFILE
+  REQUESTER_PROFILE
+}
+
+enum BadgeRoleScope {
+  ANY
+  REQUESTER
+  PROVIDER
+}
+
+enum UserBadgeStatus {
+  LOCKED
+  ELIGIBLE
+  EARNED
+  ACTIVE
+  INACTIVE
+  REVOKED
+}
+
+enum BadgeTriggerType {
+  ACCOUNT_VERIFIED
+  EARLY_ADOPTER
+  FIRST_SUCCESS
+  VERIFIED_TASK_COUNT
+  APPROVAL_RATE
+  RESPONSE_TIME
+  REVIEW_TIME
+  DISPUTE_RATE
+  REVISION_RATE
+  STREAK
+  LOW_DISPUTE
+  KICKSTARTER_TIER
+  HALL_OF_FAME
+  MANUAL
+}
+
+enum BadgeRewardType {
+  RECOGNITION_ONLY
+  TASK_CREDIT
+  VISIBILITY_BOOST
+  PRIORITY_BOOST
+  SUPPORT_PRIORITY
+}
+
+enum RewardLedgerType {
+  BADGE_EARNED
+  BADGE_ACTIVATED
+  BADGE_RENEWED
+  BADGE_EXPIRED
+  BADGE_DEACTIVATED
+  BADGE_REVOKED
+  BADGE_REWARD_GRANTED
+  BADGE_REWARD_REMOVED
+  MILESTONE_REWARD
+  WEEKLY_CONTRIBUTION
+  STREAK_UPDATED
+  ADDITIONAL_REWARD_GRANTED
+  ADMIN_ADJUSTMENT
+  SHOWCASE_FEATURED
+  SHOWCASE_HIDDEN
+}
+
+enum RewardBenefitStatus {
+  ACTIVE
+  INACTIVE
+  EXPIRED
+  REVOKED
+}
+
+enum ShowcaseSection {
+  TOP_CONTRIBUTORS
+  TRUSTED_PARTNERS
+  FEATURED_MEMBERS
+  FEATURED_WEBSITES
+  MOST_SUCCESSFUL_WEBSITES
+  HIGHEST_RATED_PROVIDERS
+  RISING_STARS
+  TOP_PERFORMERS_WEEK
+  TOP_PERFORMERS_MONTH
+  ADMIN_FEATURED_MEMBERS
+}
+
+enum ShowcaseEntityType {
+  USER
+  WEBSITE
+}
+
+enum RankingPeriod {
+  ALL_TIME
+  THIS_WEEK
+  THIS_MONTH
+  LAST_30_DAYS
+  THIS_YEAR
+}
+
+enum ShowcaseLinkType {
+  DOFOLLOW
+  NOFOLLOW
+  SPONSORED
+}
+
+enum RewardOutboxStatus {
+  PENDING
+  PROCESSING
+  PROCESSED
+  FAILED
+}
+
+enum RewardAuditActorType {
+  ADMIN
+  SYSTEM
+}
+
+enum RewardAuditStatus {
+  SUCCESS
+  FAILED
+  WARNING
+}
+
+model BadgeDefinition {
+  id                 String           @id @default(uuid())
+  code               String           @unique
+  name               String
+  description        String?
+  category           BadgeCategory    @default(MARKETPLACE)
+  requirementText    String?
+  rewardImpactText   String?
+  badgeScope         BadgeScope       @default(USER_PROFILE)
+  roleScope          BadgeRoleScope   @default(ANY)
+  triggerType        BadgeTriggerType
+  threshold          Int?
+  secondaryThreshold Int?
+  isPersistent       Boolean          @default(true)
+  isActive           Boolean          @default(true)
+  rewardType         BadgeRewardType  @default(RECOGNITION_ONLY)
+  rewardValue        Int?
+  rewardMeta         Json?
+  validityDays       Int?
+  refreshWindowDays  Int?
+  gracePeriodDays    Int?
+  createdAt          DateTime         @default(now())
+  updatedAt          DateTime         @updatedAt
+
+  userBadges          UserBadge[]
+  rewardBenefits      UserRewardBenefit[]
+  rewardLedgerEntries RewardLedger[]
+  rewardAuditLogs     RewardAuditLog[]
+}
+
+model UserBadge {
+  id               String          @id @default(uuid())
+  userId           String
+  badgeId          String
+  status           UserBadgeStatus @default(LOCKED)
+  earnedAt         DateTime?
+  activatedAt      DateTime?
+  deactivatedAt    DateTime?
+  revokedAt        DateTime?
+  lastQualifiedAt  DateTime?
+  lastEvaluatedAt  DateTime?
+  nextEvaluationAt DateTime?
+  expiresAt        DateTime?
+  triggerTaskId    String?
+  triggerWebsiteId String?
+  metadata         Json?
+  createdAt        DateTime        @default(now())
+  updatedAt        DateTime        @updatedAt
+
+  user            User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  badge           BadgeDefinition  @relation(fields: [badgeId], references: [id], onDelete: Cascade)
+  rewardAuditLogs RewardAuditLog[]
+
+  @@unique([userId, badgeId])
+  @@index([userId, status])
+  @@index([badgeId])
+  @@index([nextEvaluationAt])
+  @@index([expiresAt])
+}
+
+model UserRewardProfile {
+  id                               String    @id @default(uuid())
+  userId                           String    @unique
+  totalApprovedTasks               Int       @default(0)
+  providerApprovedTasks            Int       @default(0)
+  requesterCompletedTasks          Int       @default(0)
+  providerReviewedTasks            Int       @default(0)
+  providerApprovalRate             Float     @default(0)
+  providerDisputeRate              Float     @default(0)
+  providerRevisionRate             Float     @default(0)
+  providerResponseRate24h          Float     @default(0)
+  providerFastResponseCount        Int       @default(0)
+  providerResponseOpportunityCount Int       @default(0)
+  requesterReviewRate72h           Float     @default(0)
+  requesterFastReviewCount         Int       @default(0)
+  requesterReviewOpportunityCount  Int       @default(0)
+  requesterDisputeRate             Float     @default(0)
+  currentStreakCount               Int       @default(0)
+  bestStreakCount                  Int       @default(0)
+  milestoneTaskCount               Int       @default(0)
+  nextMilestoneAt                  Int       @default(10)
+  uniqueRequesterCount             Int       @default(0)
+  uniqueProviderCount              Int       @default(0)
+  uniqueDomainCount                Int       @default(0)
+  earnedBadgeCount                 Int       @default(0)
+  activeRewardCount                Int       @default(0)
+  lastRewardEvaluatedAt            DateTime?
+  createdAt                        DateTime  @default(now())
+  updatedAt                        DateTime  @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model UserRewardBenefit {
+  id            String              @id @default(uuid())
+  userId        String
+  rewardCode    String
+  rewardType    BadgeRewardType
+  status        RewardBenefitStatus @default(ACTIVE)
+  value         Int?
+  metadata      Json?
+  sourceBadgeId String?
+  sourceTaskId  String?
+  activatedAt   DateTime?
+  expiresAt     DateTime?
+  deactivatedAt DateTime?
+  createdAt     DateTime            @default(now())
+  updatedAt     DateTime            @updatedAt
+
+  user            User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  sourceBadge     BadgeDefinition? @relation(fields: [sourceBadgeId], references: [id], onDelete: SetNull)
+  rewardAuditLogs RewardAuditLog[]
+
+  @@index([userId, status])
+  @@index([rewardType, status])
+  @@index([rewardCode])
+  @@index([expiresAt])
+}
+
+model RewardLedger {
+  id              String           @id @default(uuid())
+  userId          String
+  taskId          String?
+  badgeId         String?
+  sourceWebsiteId String?
+  rewardType      RewardLedgerType
+  rewardCode      String
+  rewardValue     Int?
+  eventKey        String           @unique
+  reason          String?
+  metadata        Json?
+  createdAt       DateTime         @default(now())
+
+  user            User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  task            PlacementTask?   @relation(fields: [taskId], references: [id], onDelete: SetNull)
+  badge           BadgeDefinition? @relation(fields: [badgeId], references: [id], onDelete: SetNull)
+  sourceWebsite   Website?         @relation(fields: [sourceWebsiteId], references: [id], onDelete: SetNull)
+  rewardAuditLogs RewardAuditLog[]
+
+  @@index([userId, createdAt])
+  @@index([taskId])
+  @@index([badgeId])
+  @@index([rewardCode])
+}
+
+model AdditionalRewardDefinition {
+  id              String          @id @default(uuid())
+  code            String          @unique
+  title           String
+  description     String?
+  rewardType      BadgeRewardType
+  requirementText String?
+  rewardValueText String?
+  roleScope       BadgeRoleScope  @default(ANY)
+  isActive        Boolean         @default(true)
+  sortOrder       Int             @default(0)
+  metadata        Json?
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+}
+
+model RewardProcessingOutbox {
+  id              String             @id @default(uuid())
+  taskId          String             @unique
+  status          RewardOutboxStatus @default(PENDING)
+  attempts        Int                @default(0)
+  lastError       String?
+  processedAt     DateTime?
+  createdAt       DateTime           @default(now())
+  updatedAt       DateTime           @updatedAt
+  rewardAuditLogs RewardAuditLog[]
+
+  @@index([status, createdAt])
+}
+
+model RewardAuditLog {
+  id                String               @id @default(cuid())
+  module            String               @default("REWARDS")
+  action            String
+  actorType         RewardAuditActorType
+  actorId           String?
+  targetUserId      String?
+  badgeDefinitionId String?
+  userBadgeId       String?
+  rewardBenefitId   String?
+  rewardLedgerId    String?
+  rewardOutboxId    String?
+  source            String?
+  status            RewardAuditStatus    @default(SUCCESS)
+  reason            String?
+  oldValue          Json?
+  newValue          Json?
+  metadata          Json?
+  ipAddress         String?
+  userAgent         String?
+  errorMessage      String?
+  createdAt         DateTime             @default(now())
+
+  actor           User?                   @relation("RewardAuditActor", fields: [actorId], references: [id], onDelete: SetNull)
+  targetUser      User?                   @relation("RewardAuditTargetUser", fields: [targetUserId], references: [id], onDelete: SetNull)
+  badgeDefinition BadgeDefinition?        @relation(fields: [badgeDefinitionId], references: [id], onDelete: SetNull)
+  userBadge       UserBadge?              @relation(fields: [userBadgeId], references: [id], onDelete: SetNull)
+  rewardBenefit   UserRewardBenefit?      @relation(fields: [rewardBenefitId], references: [id], onDelete: SetNull)
+  rewardLedger    RewardLedger?           @relation(fields: [rewardLedgerId], references: [id], onDelete: SetNull)
+  rewardOutbox    RewardProcessingOutbox? @relation(fields: [rewardOutboxId], references: [id], onDelete: SetNull)
+
+  @@index([action])
+  @@index([actorType])
+  @@index([actorId])
+  @@index([targetUserId])
+  @@index([badgeDefinitionId])
+  @@index([status])
+  @@index([source])
+  @@index([createdAt])
+}
+
+model CommunityShowcaseEntry {
+  id               String             @id @default(uuid())
+  section          ShowcaseSection
+  entityType       ShowcaseEntityType
+  entityId         String
+  title            String?
+  subtitle         String?
+  description      String?
+  isVisible        Boolean            @default(true)
+  isFeatured       Boolean            @default(false)
+  sortOrder        Int                @default(0)
+  priority         Int                @default(0)
+  featuredFrom     DateTime?
+  featuredUntil    DateTime?
+  showExternalLink Boolean            @default(false)
+  linkType         ShowcaseLinkType?
+  createdByAdminId String?
+  updatedByAdminId String?
+  reason           String?
+  createdAt        DateTime           @default(now())
+  updatedAt        DateTime           @updatedAt
+
+  @@index([section, isVisible])
+  @@index([entityType, entityId])
+  @@index([isFeatured])
+  @@index([priority])
+}
+
+model CommunityRankingSnapshot {
+  id          String             @id @default(uuid())
+  section     ShowcaseSection
+  period      RankingPeriod
+  entityType  ShowcaseEntityType
+  generatedAt DateTime           @default(now())
+  expiresAt   DateTime?
+
+  entries CommunityRankingEntry[]
+
+  @@index([section, period, entityType])
+  @@index([generatedAt])
+}
+
+model CommunityRankingEntry {
+  id          String             @id @default(uuid())
+  snapshotId  String
+  entityType  ShowcaseEntityType
+  entityId    String
+  rank        Int
+  score       Float              @default(0)
+  metrics     Json?
+  displayData Json?
+  createdAt   DateTime           @default(now())
+
+  snapshot CommunityRankingSnapshot @relation(fields: [snapshotId], references: [id], onDelete: Cascade)
+
+  @@index([snapshotId, rank])
+  @@index([entityType, entityId])
+  @@index([score])
+}
+
+model UserShowcaseStats {
+  id                   String    @id @default(uuid())
+  userId               String    @unique
+  approvedTasks        Int       @default(0)
+  approvalRate         Float     @default(0)
+  disputeRate          Float     @default(0)
+  revisionRate         Float     @default(0)
+  activeBadgeCount     Int       @default(0)
+  permanentBadgeCount  Int       @default(0)
+  hallOfFameCount      Int       @default(0)
+  weeklyApprovedTasks  Int       @default(0)
+  monthlyApprovedTasks Int       @default(0)
+  topContributorScore  Float     @default(0)
+  trustedPartnerScore  Float     @default(0)
+  risingStarScore      Float     @default(0)
+  lastCalculatedAt     DateTime?
+  createdAt            DateTime  @default(now())
+  updatedAt            DateTime  @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([topContributorScore])
+  @@index([trustedPartnerScore])
+  @@index([risingStarScore])
+}
+
+model WebsiteShowcaseStats {
+  id                     String    @id @default(uuid())
+  websiteId              String    @unique
+  ownerUserId            String
+  approvedPlacements     Int       @default(0)
+  approvalRate           Float     @default(0)
+  disputeRate            Float     @default(0)
+  weeklyPlacements       Int       @default(0)
+  monthlyPlacements      Int       @default(0)
+  successfulWebsiteScore Float     @default(0)
+  lastCalculatedAt       DateTime?
+  createdAt              DateTime  @default(now())
+  updatedAt              DateTime  @updatedAt
+
+  website   Website @relation(fields: [websiteId], references: [id], onDelete: Cascade)
+  ownerUser User    @relation(fields: [ownerUserId], references: [id], onDelete: Cascade)
+
+  @@index([ownerUserId])
+  @@index([successfulWebsiteScore])
+}

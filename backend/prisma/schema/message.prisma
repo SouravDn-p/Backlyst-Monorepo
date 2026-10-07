@@ -1,0 +1,110 @@
+enum MessageContextType {
+  DIRECT
+  TASK
+  DISPUTE
+  ADMIN_SUPPORT
+}
+
+enum MessageRecordType {
+  MESSAGE
+  FILE
+}
+
+enum MessageRegistryStatus {
+  VERIFIED
+  FLAGGED
+  RESTRICTED
+}
+
+enum MessageReportStatus {
+  PENDING
+  REVIEWED
+  DISMISSED
+  ACTION_TAKEN
+}
+
+enum MessageReportReason {
+  SPAM
+  ABUSE
+  FAKE_PROOF
+  OFF_PLATFORM_PAYMENT
+  SENSITIVE_INFORMATION
+  THREAT
+  OTHER
+}
+
+model Message {
+  id String @id @default(uuid())
+
+  senderId    String
+  recipientId String
+
+  senderEmailSnapshot    String?
+  recipientEmailSnapshot String?
+
+  text     String?
+  document String?
+
+  taskId      String?
+  contextType MessageContextType @default(DIRECT)
+  recordType  MessageRecordType  @default(MESSAGE)
+
+  registryStatus      MessageRegistryStatus @default(VERIFIED)
+  registryReason      String?
+  registryUpdatedAt   DateTime?
+  registryUpdatedById String?
+  reportCount         Int                   @default(0)
+  latestReportId      String?
+  isManualOverride    Boolean               @default(false)
+
+  isDeleted Boolean   @default(false)
+  deletedAt DateTime?
+
+  createdAt DateTime @default(now())
+
+  Sender   User @relation("SenderMessages", fields: [senderId], references: [id])
+  Receiver User @relation("ReceiverMessages", fields: [recipientId], references: [id])
+
+  task    PlacementTask?  @relation(fields: [taskId], references: [id], onDelete: SetNull)
+  reports MessageReport[]
+
+  @@index([senderId])
+  @@index([recipientId])
+  @@index([taskId, createdAt])
+  @@index([senderId, recipientId, taskId, createdAt])
+  @@index([registryStatus])
+  @@index([reportCount])
+  @@index([latestReportId])
+  @@index([isManualOverride])
+  @@index([contextType])
+  @@index([recordType])
+  @@index([isDeleted])
+}
+
+model MessageReport {
+  id String @id @default(uuid())
+
+  messageId  String
+  reporterId String
+
+  reason MessageReportReason
+  note   String?
+  status MessageReportStatus @default(PENDING)
+
+  reviewedById String?
+  reviewedAt   DateTime?
+  reviewNote   String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  message Message @relation(fields: [messageId], references: [id], onDelete: Cascade)
+
+  reporter   User  @relation("MessageReporter", fields: [reporterId], references: [id])
+  reviewedBy User? @relation("MessageReportReviewer", fields: [reviewedById], references: [id])
+
+  @@unique([messageId, reporterId])
+  @@index([messageId])
+  @@index([reporterId])
+  @@index([status])
+}
