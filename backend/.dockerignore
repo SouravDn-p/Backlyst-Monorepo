@@ -1,0 +1,66 @@
+# Dependencies
+node_modules
+
+# Build output
+dist
+build
+coverage
+
+# Logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Environment
+.env
+.env.*
+
+# Git
+.git
+.gitignore
+
+# Docker
+.dockerignore
+docker-compose*.yml
+Dockerfile*
+
+# IDE
+.vscode
+.idea
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Misc
+tmp
+temp
+*.md
+./docs/*
+
+# Testing
+test
+tests
+**/*.spec.ts
+**/*.e2e-spec.ts
+jest.config*
+
+# CI/CD
+.github
+.gitlab-ci.yml
+
+# Misc dev files
+*.local
+seeder
+seeds
+node_modules
+dist
+.git
+.env
+src.zip
+*.rar
+npm-debug.log

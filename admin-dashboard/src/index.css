@@ -1,0 +1,128 @@
+@import "tailwindcss";
+
+/* ============================================================
+   DESIGN TOKENS — Backlyst Admin Dashboard
+   All color values sourced from the Figma design file.
+   Update these tokens when the design system changes.
+   ============================================================ */
+
+@theme {
+  /* Typography */
+  --font-arimo: "Arimo", sans-serif;
+
+  /* ── Brand Primary ─────────────────────────────────────── */
+  --color-brand-indigo: #331ffd;
+  --color-brand-indigo-light: #5242ff;
+  --color-brand-indigo-soft: #ebe9ff;
+
+  /* ── Brand Accent ──────────────────────────────────────── */
+  --color-brand-orange: #fd751f;
+
+  /* ── Semantic: Status Colors ───────────────────────────── */
+  --color-status-verified: #00c950;
+  --color-status-pending: #ff6900;
+  --color-status-flagged: #fb2c36;
+  --color-status-accepted: #155dfc;
+  --color-status-grace: #f54900;
+  --color-status-visible: #00a63e;
+  --color-status-disputed: #fb2c36;
+
+  /* ── Semantic: Functional Colors ───────────────────────── */
+  --color-secure-icon: #12b76a;
+  --color-trust-bar: #12b76a;
+  --color-footer-bg: #fd751f;
+  --color-sidebar-active: #ebe9ff;
+}
+
+/* ============================================================
+   BASE STYLES
+   ============================================================ */
+
+@layer base {
+  html {
+    /* Base font-size: 16px (browser default).
+       All px values in components match Figma 1:1. */
+    font-size: 16px;
+  }
+
+  body {
+    @apply bg-[#F9FAFB] text-gray-900 font-arimo antialiased;
+  }
+
+  /* All headings use Arimo bold by default */
+  h1, h2, h3, h4, h5, h6 {
+    @apply font-arimo;
+  }
+
+  /* Remove browser-default focus outlines on interactive elements */
+  button, a, input, select, textarea {
+    outline: none;
+  }
+  button:focus-visible, a:focus-visible {
+    outline: 2px solid #331ffd;
+    outline-offset: 2px;
+    border-radius: 4px;
+  }
+}
+
+/* ============================================================
+   UTILITY OVERRIDES
+   ============================================================ */
+
+/* Custom scrollbar for sidebar and panels */
+.custom-scrollbar::-webkit-scrollbar {
+  width: 4px;
+}
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: #d1d5db;
+  border-radius: 9999px;
+}
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: #9ca3af;
+}
+
+/* ============================================================
+   ANIMATIONS
+   ============================================================ */
+
+@keyframes slideInRight {
+  from {
+    transform: translateX(100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+@keyframes slideInLeft {
+  from {
+    transform: translateX(-100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.animate-slide-in-right {
+  animation: slideInRight 0.25s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.animate-slide-in-left {
+  animation: slideInLeft 0.25s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.animate-fade-in {
+  animation: fadeIn 0.2s ease both;
+}

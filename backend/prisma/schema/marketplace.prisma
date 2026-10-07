@@ -1,0 +1,994 @@
+enum MarketplaceOverrideType {
+  BOOST
+  SUPPRESS
+  FORCE_MATCH
+  SCORE_OVERRIDE
+  PENALTY
+  LIMIT_BYPASS
+  RISK_BYPASS
+  PRIORITY
+  MANUAL_ASSIGNMENT
+  RESTRICTION
+}
+
+///////----------added by imran----------////////
+enum WebsiteMarketplaceStatus {
+  ACTIVE
+  LOW_PRIORITY
+  LIMITED_ACCESS
+  UNDER_REVIEW
+  RESTRICTED
+  SUSPENDED
+}
+
+enum MarketplaceOverrideStatus {
+  ACTIVE
+  EXPIRED
+  REVOKED
+}
+
+enum MarketplaceCategoryRole {
+  PRIMARY
+  SECONDARY
+}
+
+enum BehaviourPatternType {
+  ERRATIC_TIMING
+  RATING_CLUSTERING
+  BURST_IDLE_SWITCH
+}
+
+enum BehaviourPatternSeverity {
+  LOW
+  MEDIUM
+  HIGH
+}
+
+enum QualityStatusTrigger {
+  TASK_COMPLETED
+  TASK_REJECTED
+  TASK_FAILED
+  TASK_CANCELLED
+  DISPUTE_RESOLVED
+  INTERACTION_COMPLETED
+  SCHEDULED_RECALC
+  ADMIN_OVERRIDE
+  ADMIN_RESET
+  RISK_EVENT
+}
+
+model WebsiteMatchingProfile {
+  id String @id @default(cuid())
+
+  websiteId String @unique
+  userId    String
+
+  visibilityScore       Float                    @default(50)
+  opportunityScore      Float                    @default(50)
+  reputationScore       Float                    @default(50)
+  boostFactor           Float                    @default(2.5)
+  //////----------add from imran---------///////
+  marketplaceStatus     WebsiteMarketplaceStatus @default(ACTIVE)
+  internalPriorityScore Float                    @default(50)
+  reliabilityScore      Float                    @default(50)
+  riskScore             Float                    @default(0)
+  lastRiskEventAt       DateTime?
+  lastRiskReason        String?
+  behaviourScore        Float                    @default(50)
+  lastBehaviourScoredAt DateTime?
+  diversityScore        Float                    @default(50)
+
+  qualityScore             Float     @default(50)
+  lastQualityScoreUpdateAt DateTime?
+
+  premiumQualityAccessEligible Boolean @default(false)
+
+  lastQualityRecomputeAt DateTime?
+
+  successfulInteractions Int @default(0)
+
+  firstSuccessBoostActive Boolean   @default(true)
+  firstSuccessAt          DateTime?
+  forceNewDomainNext      Boolean   @default(false)
+  forceNewDomainUntil     DateTime?
+
+  completedInteractions Int @default(0)
+  failedInteractions    Int @default(0)
+  totalInteractions     Int @default(0)
+
+  completionRate   Float @default(1)
+  qualityRatingSum Float @default(0)
+  avgQualityRating Float @default(0)
+
+  boostDecayCount Int @default(10)
+
+  forceMatchNext Boolean @default(false)
+
+  isSuppressed    Boolean   @default(false)
+  suppressedUntil DateTime?
+
+  marketplaceStatusDailyCap Int?
+
+  lastShownAt     DateTime?
+  lastMatchedAt   DateTime?
+  lastSelectedAt  DateTime?
+  lastCompletedAt DateTime?
+
+  exposureCount7d    Int @default(0)
+  matchCount7d       Int @default(0)
+  applicationCount7d Int @default(0)
+
+  lastApplicationAt      DateTime?
+  minHoursBetweenMatches Int?      @default(0)
+
+  weeklyInteractionLimit Int?
+  tierVelocityLimit      Int?
+
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  website Website @relation(fields: [websiteId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId])
+  @@index([websiteId])
+  @@index([opportunityScore])
+  @@index([visibilityScore])
+  @@index([reputationScore])
+  @@index([boostFactor])
+  @@index([isSuppressed, suppressedUntil])
+  @@index([marketplaceStatus])
+  @@index([internalPriorityScore])
+  @@index([riskScore])
+  @@index([behaviourScore])
+  @@index([forceNewDomainNext])
+  @@index([marketplaceStatus, isSuppressed, suppressedUntil])
+}
+
+model OpportunityImpression {
+  id String @id @default(cuid())
+
+  providerId        String
+  providerWebsiteId String?
+
+  taskId String
+
+  requesterId        String
+  requesterWebsiteId String
+
+  score           Float?
+  rank            Int?
+  relaxationLevel Int?
+  reasons         Json?
+
+  shownAt DateTime @default(now())
+
+  provider        User     @relation("OpportunityProvider", fields: [providerId], references: [id], onDelete: Cascade)
+  providerWebsite Website? @relation("OpportunityProviderWebsite", fields: [providerWebsiteId], references: [id], onDelete: SetNull)
+
+  requester        User    @relation("OpportunityRequester", fields: [requesterId], references: [id], onDelete: Cascade)
+  requesterWebsite Website @relation("OpportunityRequesterWebsite", fields: [requesterWebsiteId], references: [id], onDelete: Cascade)
+
+  task PlacementTask @relation(fields: [taskId], references: [id], onDelete: Cascade)
+
+  @@index([providerId, shownAt])
+  @@index([providerWebsiteId, shownAt])
+  @@index([taskId, shownAt])
+  @@index([requesterId, shownAt])
+  @@index([requesterWebsiteId, shownAt])
+  @@index([relaxationLevel])
+}
+
+model MatchingAuditLog {
+  id String @id @default(cuid())
+
+  userId           String
+  websiteId        String
+  candidatesEval   Int
+  eligibleMatches  Int
+  relaxationLevel  Int
+  marketplaceMode  String
+  processingTimeMs Int
+  timestamp        DateTime @default(now())
+  metadata         Json?
+
+  @@index([userId])
+  @@index([websiteId])
+  @@index([timestamp])
+}
+
+model MarketplaceScoringConfig {
+  id String @id @default("MARKETPLACE_SCORING_CONFIG")
+
+  compatibilityWeight Float @default(0.35)
+  opportunityWeight   Float @default(0.25)
+  visibilityWeight    Float @default(0.15)
+  reputationWeight    Float @default(0.15)
+  boostWeight         Float @default(0.10)
+
+  internalPriorityWeight Float @default(0.1)
+
+  diversityWeight Float @default(0.05)
+
+  behaviourWeight Float @default(0.05)
+
+  qualityWeight Float @default(0.05)
+
+  minViableMatches Int @default(10)
+
+  maxRelaxationLevel Int @default(4)
+
+  newWebsiteBoostFactor Float @default(2.5)
+  minBoostFactor        Float @default(1.0)
+  maxBoostFactor        Float @default(3.0)
+  boostDecayRate        Float @default(0.15)
+
+  forceMatchBonus Float @default(1000)
+
+  exposurePenaltyPerTaskView      Float @default(2)
+  exposurePenaltyPerRequesterView Float @default(1)
+  maxRequesterExposurePerDay      Int   @default(50)
+  maxProviderMatchesPerDay        Int   @default(3)
+
+  neglectedAfterHours  Int @default(72)
+  forceMatchAfterHours Int @default(168)
+
+  lowPriorityFactor Float @default(0.7)
+
+  restrictedVisibilityFactor  Float @default(0.4)
+  underReviewVisibilityFactor Float @default(0.7)
+
+  restrictedDailyCapFactor Float @default(0.34)
+
+  impressionLookbackDays  Int @default(7)
+  impressionRetentionDays Int @default(30)
+
+  // Audit R-Repeat-4: retention window (in days) for the append-only
+  // DomainRelationshipEvent table. Events older than this are archived so the
+  // event table stays bounded. The relationship-retention cron reads this value.
+  relationshipEventRetentionDays Int @default(180)
+
+  riskPenaltyDisputeWeight   Float @default(20)
+  riskPenaltyRejectionWeight Float @default(10)
+
+  repeatPairCooldownDays Int @default(90)
+  reciprocalCooldownDays Int @default(120)
+
+  maxNetworkConcentrationPerWindow Int @default(50)
+  networkConcentrationWindowDays   Int @default(7)
+
+  qualityActiveThreshold        Float @default(60)
+  qualityLowPriorityThreshold   Float @default(40)
+  qualityLimitedAccessThreshold Float @default(25)
+
+  qualityGradualTransitions Boolean @default(true)
+
+  qualityMinInteractionsForStatus Int @default(5)
+
+  qualityUnderReviewRiskThreshold Float @default(60)
+
+  limitedAccessDailyCap Int @default(1)
+
+  qualityCompletionWeight  Float @default(0.25)
+  qualityReliabilityWeight Float @default(0.25)
+  qualityRatingWeight      Float @default(0.20)
+  qualityActivityWeight    Float @default(0.10)
+  qualityConsistencyWeight Float @default(0.10)
+  qualityDiversityWeight   Float @default(0.05)
+  qualityBehaviourWeight   Float @default(0.05)
+
+  qualityPremiumAccessThreshold Float @default(75)
+
+  isActive Boolean @default(true)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model MarketplaceOverride {
+  id String @id @default(cuid())
+
+  websiteId String?
+  taskId    String?
+  accountId String?
+  adminId   String
+
+  type   MarketplaceOverrideType
+  status MarketplaceOverrideStatus @default(ACTIVE)
+
+  boostValue       Float?
+  visibilityScore  Float?
+  opportunityScore Float?
+  reputationScore  Float?
+  forceMatchNext   Boolean?
+
+  suppressUntil DateTime?
+
+  reasonCode String
+  note       String?
+
+  activeFrom  DateTime  @default(now())
+  activeUntil DateTime?
+
+  revokedAt    DateTime?
+  revokedById  String?
+  revokeReason String?
+
+  website Website? @relation(fields: [websiteId], references: [id], onDelete: Cascade)
+  admin   User     @relation("MarketplaceOverrideAdmin", fields: [adminId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([websiteId])
+  @@index([taskId])
+  @@index([accountId])
+  @@index([adminId])
+  @@index([type])
+  @@index([status])
+  @@index([activeFrom, activeUntil])
+}
+
+///----------added by imran -------------///
+enum DomainInteractionStatus {
+  PENDING
+  ACCEPTED
+  COMPLETED
+  REJECTED
+  CANCELLED
+  DISPUTED
+}
+
+model DomainInteraction {
+  id String @id @default(cuid())
+
+  interactionId String @unique @default(cuid())
+
+  taskId String @unique
+
+  sourceWebsiteId String
+  targetWebsiteId String
+
+  sourceDomain String
+  targetDomain String
+
+  normalizedPairKey String
+
+  sourcePrimaryCategoryKey String?
+  targetPrimaryCategoryKey String?
+
+  sourceSecondaryCategoryKey String?
+  targetSecondaryCategoryKey String?
+
+  interactionStatus DomainInteractionStatus @default(COMPLETED)
+
+  completedAt DateTime @default(now())
+  createdAt   DateTime @default(now())
+
+  @@index([sourceDomain])
+  @@index([targetDomain])
+  @@index([normalizedPairKey])
+  @@index([completedAt])
+  @@index([interactionStatus])
+  @@index([sourcePrimaryCategoryKey])
+  @@index([targetPrimaryCategoryKey])
+  @@index([sourceSecondaryCategoryKey])
+  @@index([targetSecondaryCategoryKey])
+  @@index([sourceWebsiteId, targetWebsiteId, completedAt])
+}
+
+model DomainRelationshipEvent {
+  id String @id @default(cuid())
+
+  orderedPairKey String
+
+  normalizedPairKey String
+
+  sourceDomain String
+  targetDomain String
+
+  domainA String
+  domainB String
+
+  interactionStatus DomainInteractionStatus
+
+  repeatPairCooldownUntil DateTime?
+  reciprocalCooldownUntil DateTime?
+
+  sourceWebsiteId String
+  targetWebsiteId String
+
+  taskId String?
+
+  sourcePrimaryCategoryKey   String?
+  targetPrimaryCategoryKey   String?
+  sourceSecondaryCategoryKey String?
+  targetSecondaryCategoryKey String?
+
+  trigger String
+
+  createdAt DateTime @default(now())
+
+  @@index([orderedPairKey])
+  @@index([normalizedPairKey])
+  @@index([sourceDomain])
+  @@index([targetDomain])
+  @@index([domainA])
+  @@index([domainB])
+  @@index([interactionStatus])
+  @@index([taskId])
+  @@index([createdAt])
+}
+
+// Audit R-Repeat-4: cold-storage archive of DomainRelationshipEvent rows aged
+// past MarketplaceScoringConfig.relationshipEventRetentionDays. The retention
+// cron copies each aged raw event into this table (preserving the original id so
+// re-archiving is idempotent) then deletes the live copy, keeping the hot table
+// bounded while preserving full history for compliance/forensics.
+model DomainRelationshipEventArchive {
+  id String @id
+
+  orderedPairKey    String
+  normalizedPairKey String
+
+  sourceDomain String
+  targetDomain String
+
+  domainA String
+  domainB String
+
+  interactionStatus DomainInteractionStatus
+
+  repeatPairCooldownUntil DateTime?
+  reciprocalCooldownUntil DateTime?
+
+  sourceWebsiteId String
+  targetWebsiteId String
+
+  taskId String?
+
+  sourcePrimaryCategoryKey   String?
+  targetPrimaryCategoryKey   String?
+  sourceSecondaryCategoryKey String?
+  targetSecondaryCategoryKey String?
+
+  trigger String
+
+  originalCreatedAt DateTime
+  archivedAt        DateTime @default(now())
+
+  @@index([normalizedPairKey])
+  @@index([orderedPairKey])
+  @@index([sourceDomain])
+  @@index([targetDomain])
+  @@index([originalCreatedAt])
+}
+
+model DomainPairStat {
+  id String @id @default(cuid())
+
+  normalizedPairKey String @unique
+
+  domainA String
+  domainB String
+
+  sourcePrimaryCategoryKey   String?
+  targetPrimaryCategoryKey   String?
+  sourceSecondaryCategoryKey String?
+  targetSecondaryCategoryKey String?
+
+  lastSourceDomain String?
+  lastTargetDomain String?
+
+  lastInteractionAt       DateTime?
+  repeatPairCooldownUntil DateTime?
+  reciprocalCooldownUntil DateTime?
+
+  interactionCount Int @default(0)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([domainA])
+  @@index([domainB])
+  @@index([repeatPairCooldownUntil])
+  @@index([reciprocalCooldownUntil])
+}
+
+// ---- Centralized Validation Engine audit models (spec §11) ----
+
+model MarketplaceValidationLog {
+  id              String   @id @default(cuid())
+  userId          String
+  websiteId       String?
+  taskId          String?
+  stage           String // ValidationStage value
+  decision        String // APPROVED | APPROVED_WITH_RESTRICTIONS | REJECTED
+  failedRule      String?
+  // Audit R-Repeat-2: active marketplace mode (EARLY_STAGE / SCALING) at the
+  // time of validation, so repeat-pair / governance blocks can be correlated to
+  // the mode that produced them. Populated from config.mode in
+  // ValidationEngine.logValidation.
+  marketplaceMode String?
+  overrideApplied Boolean  @default(false)
+  createdAt       DateTime @default(now())
+
+  @@index([userId, createdAt])
+  @@index([taskId, createdAt])
+  @@index([stage])
+  @@index([marketplaceMode])
+}
+
+model AdminActionLog {
+  id            String    @id @default(cuid())
+  adminId       String
+  action        String
+  targetType    String?
+  targetId      String?
+  previousValue Json?
+  newValue      Json?
+  reasonCode    String
+  explanation   String?
+  overrideId    String?
+  effectiveAt   DateTime?
+  expiresAt     DateTime?
+  revokedAt     DateTime?
+  correlationId String?
+  createdAt     DateTime  @default(now())
+
+  @@index([adminId, createdAt])
+  @@index([targetType, targetId])
+  @@index([action])
+  @@index([overrideId])
+}
+
+// ---- Niche distribution caps (spec §12) ----
+
+model NicheDistributionCap {
+  id           String  @id @default(cuid())
+  categoryKey  String
+  scope        String  @default("PRIMARY")
+  maxPerWindow Int
+  windowDays   Int     @default(7)
+  isActive     Boolean @default(true)
+  note         String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([categoryKey, scope])
+  @@index([isActive])
+}
+
+model GeographicDistributionCap {
+  id           String  @id @default(cuid())
+  countryCode  String // e.g. "US", "UK"
+  scope        String  @default("PRIMARY")
+  maxPerWindow Int
+  windowDays   Int     @default(7)
+  isActive     Boolean @default(true)
+  note         String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([countryCode, scope])
+  @@index([isActive])
+}
+
+model OpportunityTypeDistributionCap {
+  id            String  @id @default(cuid())
+  placementType String
+  scope         String  @default("PRIMARY")
+  maxPerWindow  Int
+  windowDays    Int     @default(7)
+  isActive      Boolean @default(true)
+  note          String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([placementType, scope])
+  @@index([isActive])
+}
+
+enum DisputeStatus {
+  OPEN
+  UNDER_REVIEW
+  RESOLVED
+  REJECTED
+}
+
+enum RiskEventType {
+  DISPUTE
+  REJECTION
+  FAILURE
+  ABUSE
+  SUCCESS
+}
+
+enum PatternFlagType {
+  CLUSTER_CONCENTRATION
+  RECIPROCAL_RING
+  REPEAT_BURST
+}
+
+enum PatternSeverity {
+  LOW
+  MEDIUM
+  HIGH
+}
+
+enum PatternFlagStatus {
+  OPEN
+  REVIEWING
+  RESOLVED
+  DISMISSED
+}
+
+enum MarketplaceMode {
+  EARLY_STAGE
+  SCALING
+}
+
+model Dispute {
+  id                 String        @id @default(cuid())
+  taskId             String
+  requesterWebsiteId String
+  providerWebsiteId  String
+  openedById         String
+  resolvedById       String?
+  status             DisputeStatus @default(OPEN)
+  reason             String
+  evidence           Json?
+  creditAdjustmentId String?       @unique
+  creditAdjustment   CreditLog?    @relation("DisputeCreditAdjustment", fields: [creditAdjustmentId], references: [id], onDelete: SetNull)
+  openedAt           DateTime      @default(now())
+  resolvedAt         DateTime?
+  createdAt          DateTime      @default(now())
+  updatedAt          DateTime      @updatedAt
+
+  @@index([taskId])
+  @@index([status])
+  @@index([requesterWebsiteId])
+  @@index([providerWebsiteId])
+  @@index([creditAdjustmentId])
+}
+
+model RiskEvent {
+  id             String        @id @default(cuid())
+  websiteId      String
+  type           RiskEventType
+  delta          Float
+  riskScoreAfter Float
+  createdAt      DateTime      @default(now())
+
+  website Website @relation("WebsiteRiskEvents", fields: [websiteId], references: [id], onDelete: Cascade)
+
+  @@index([websiteId, createdAt])
+  @@index([type])
+  @@index([websiteId, type])
+}
+
+model PatternFlag {
+  id            String            @id @default(cuid())
+  type          PatternFlagType
+  severity      PatternSeverity   @default(MEDIUM)
+  status        PatternFlagStatus @default(OPEN)
+  windowStart   DateTime
+  windowEnd     DateTime
+  domainCount   Int
+  memberDomains String[]
+  evidenceJson  Json?
+  resolvedAt    DateTime?
+  resolvedById  String?
+  createdAt     DateTime          @default(now())
+  updatedAt     DateTime          @updatedAt
+
+  @@index([type])
+  @@index([status])
+  @@index([windowEnd])
+}
+
+model MarketplaceModeConfig {
+  id          String          @id @default("MARKETPLACE_MODE_CONFIG")
+  mode        MarketplaceMode @default(EARLY_STAGE)
+  isActive    Boolean         @default(true)
+  preset      Json?
+  updatedById String?
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
+}
+
+model ManualMatchQueue {
+  id                 String    @id @default(cuid())
+  taskId             String
+  providerWebsiteId  String
+  requesterWebsiteId String
+  status             String    @default("PENDING")
+  createdById        String
+  note               String?
+  resolvedAt         DateTime?
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
+
+  task             PlacementTask @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  providerWebsite  Website       @relation("ManualMatchProviderWebsite", fields: [providerWebsiteId], references: [id], onDelete: Cascade)
+  requesterWebsite Website       @relation("ManualMatchRequesterWebsite", fields: [requesterWebsiteId], references: [id], onDelete: Cascade)
+
+  @@index([taskId])
+  @@index([providerWebsiteId])
+  @@index([requesterWebsiteId])
+  @@index([status])
+}
+
+model QualityRubric {
+  id String @id @default(cuid())
+
+  taskId String @unique
+
+  providerWebsiteId  String
+  requesterWebsiteId String
+
+  contentRelevance    Int
+  technicalQuality    Int
+  communication       Int
+  timeliness          Int
+  overallSatisfaction Int
+
+  compositeScore Float
+
+  comments String?
+
+  createdAt DateTime @default(now())
+
+  @@index([providerWebsiteId])
+  @@index([requesterWebsiteId])
+}
+
+model BehaviourPattern {
+  id String @id @default(cuid())
+
+  websiteId String
+
+  patternType BehaviourPatternType
+  severity    BehaviourPatternSeverity @default(MEDIUM)
+  score       Float                    @default(0)
+  windowStart DateTime
+  windowEnd   DateTime
+
+  evidenceJson Json?
+
+  resolvedAt DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  website Website @relation("WebsiteBehaviourPatterns", fields: [websiteId], references: [id], onDelete: Cascade)
+
+  @@index([websiteId, windowEnd])
+  @@index([patternType])
+  @@index([severity])
+  @@index([resolvedAt])
+}
+
+model WebsiteQualityStatusLog {
+  id String @id @default(cuid())
+
+  websiteId String
+
+  previousStatus WebsiteMarketplaceStatus
+  newStatus      WebsiteMarketplaceStatus
+
+  previousScore Float
+  newScore      Float
+
+  trigger QualityStatusTrigger
+
+  adminId    String?
+  reasonCode String?
+  note       String?
+
+  createdAt DateTime @default(now())
+
+  website Website @relation("WebsiteQualityStatusLogs", fields: [websiteId], references: [id], onDelete: Cascade)
+
+  @@index([websiteId, createdAt])
+  @@index([trigger])
+  @@index([newStatus])
+}
+
+model RankingRunLog {
+  id               String   @id @default(cuid())
+  providerId       String
+  candidatesIn     Int
+  candidatesOut    Int
+  marketplaceMode  String
+  lowPoolActive    Boolean  @default(false)
+  processingTimeMs Int
+  topScores        Json?
+  createdAt        DateTime @default(now())
+
+  @@index([providerId, createdAt])
+  @@index([marketplaceMode])
+  @@index([createdAt])
+}
+
+model VisibilityAdjustmentLog {
+  id String @id @default(cuid())
+
+  rankingRunLogId String?
+
+  providerId String
+  taskId     String
+  websiteId  String
+
+  adjustmentType String
+
+  beforeScore Float
+  afterScore  Float
+
+  factor            Float?
+  marketplaceStatus String?
+  reasonCode        String
+
+  marketplaceMode String   @default("NORMAL")
+  createdAt       DateTime @default(now())
+
+  @@index([providerId, createdAt])
+  @@index([websiteId, createdAt])
+  @@index([taskId, createdAt])
+  @@index([rankingRunLogId])
+  @@index([adjustmentType])
+}
+
+model QualityScoreHistory {
+  id String @id @default(cuid())
+
+  websiteId String
+
+  qualityScore     Float
+  completionScore  Float?
+  reliabilityScore Float?
+  ratingScore      Float?
+  activityScore    Float?
+  consistencyScore Float?
+  diversityScore   Float?
+  behaviourScore   Float?
+  riskScore        Float?
+
+  marketplaceStatus WebsiteMarketplaceStatus
+
+  trigger QualityStatusTrigger
+
+  createdAt DateTime @default(now())
+
+  website Website @relation("WebsiteQualityScoreHistory", fields: [websiteId], references: [id], onDelete: Cascade)
+
+  @@index([websiteId, createdAt])
+  @@index([createdAt])
+}
+
+model PublicSuffixList {
+  id        String   @id @default(cuid())
+  suffix    String   @unique
+  isActive  Boolean  @default(true)
+  note      String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([isActive])
+}
+
+// ---- Taxonomy Foundation (Phase 2) ----
+
+model MarketplaceCategory {
+  id        String   @id @default(uuid())
+  slug      String   @unique
+  name      String
+  enabled   Boolean  @default(true)
+  parentId  String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  parent   MarketplaceCategory?  @relation("CategoryHierarchy", fields: [parentId], references: [id])
+  children MarketplaceCategory[] @relation("CategoryHierarchy")
+
+  relatedFrom MarketplaceCategoryRelation[] @relation("CategoryRelationSource")
+  relatedTo   MarketplaceCategoryRelation[] @relation("CategoryRelationTarget")
+
+  websites WebsiteMarketplaceCategory[]
+  tasks    TaskMarketplaceCategory[]
+
+  @@index([enabled])
+  @@index([parentId])
+}
+
+model MarketplaceCategoryRelation {
+  id               String   @id @default(uuid())
+  sourceId         String
+  targetId         String
+  relationshipType String
+  weight           Float    @default(1.0)
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  source MarketplaceCategory @relation("CategoryRelationSource", fields: [sourceId], references: [id], onDelete: Cascade)
+  target MarketplaceCategory @relation("CategoryRelationTarget", fields: [targetId], references: [id], onDelete: Cascade)
+
+  @@unique([sourceId, targetId])
+  @@index([sourceId])
+  @@index([targetId])
+}
+
+model MarketplaceTag {
+  id        String   @id @default(uuid())
+  slug      String   @unique
+  name      String
+  enabled   Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  websites WebsiteMarketplaceTag[]
+  tasks    TaskMarketplaceTag[]
+
+  @@index([enabled])
+}
+
+model WebsiteMarketplaceCategory {
+  id         String                  @id @default(uuid())
+  websiteId  String
+  categoryId String
+  role       MarketplaceCategoryRole @default(PRIMARY)
+  createdAt  DateTime                @default(now())
+
+  website  Website             @relation(fields: [websiteId], references: [id], onDelete: Cascade)
+  category MarketplaceCategory @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+
+  @@unique([websiteId, categoryId])
+  @@index([websiteId])
+  @@index([categoryId])
+}
+
+model WebsiteMarketplaceTag {
+  id        String   @id @default(uuid())
+  websiteId String
+  tagId     String
+  createdAt DateTime @default(now())
+
+  website Website        @relation(fields: [websiteId], references: [id], onDelete: Cascade)
+  tag     MarketplaceTag @relation(fields: [tagId], references: [id], onDelete: Cascade)
+
+  @@unique([websiteId, tagId])
+  @@index([websiteId])
+  @@index([tagId])
+}
+
+model TaskMarketplaceCategory {
+  id         String                  @id @default(uuid())
+  taskId     String
+  categoryId String
+  role       MarketplaceCategoryRole @default(PRIMARY)
+  createdAt  DateTime                @default(now())
+
+  task     PlacementTask       @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  category MarketplaceCategory @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+
+  @@unique([taskId, categoryId])
+  @@index([taskId])
+  @@index([categoryId])
+}
+
+model TaskMarketplaceTag {
+  id        String   @id @default(uuid())
+  taskId    String
+  tagId     String
+  createdAt DateTime @default(now())
+
+  task PlacementTask  @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  tag  MarketplaceTag @relation(fields: [tagId], references: [id], onDelete: Cascade)
+
+  @@unique([taskId, tagId])
+  @@index([taskId])
+  @@index([tagId])
+}

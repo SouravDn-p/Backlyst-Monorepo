@@ -1,0 +1,105 @@
+enum UserRole {
+  SUPER_ADMIN
+  ADMIN
+  USER
+}
+
+enum UserStatus {
+  NOT_VERIFIED
+  ACTIVE
+  BANNED
+  DELETED
+  SUSPENDED
+}
+
+enum UserBusinessType {
+  INDIVIDUAL
+  SOLE_PROPRIETORSHIP
+  PARTNERSHIP
+  LIMITED_LIABILITY_COMPANY
+  PRIVATE_LIMITED_COMPANY
+  PUBLIC_LIMITED_COMPANY
+  CORPORATION
+  NON_PROFIT
+  GOVERNMENT
+  EDUCATIONAL
+  OTHER
+}
+
+enum TaskStatus {
+  DRAFT
+  OPEN
+  WAITING_FOR_APPLICANTS
+  APPLIED
+  SELECTED
+  ASSIGNED
+  IN_PROGRESS
+  SUBMITTED
+  REVISION_REQUESTED
+  REJECTED
+  APPROVED
+  COMPLETED
+  CANCELLED
+  EXPIRED
+  FROZEN
+  DISPUTED
+}
+
+enum PlacementType {
+  BACKLINK_INSERTION
+  GUEST_POST
+  FLEXIBLE
+}
+
+enum LinkAttribute {
+  DOFOLLOW
+  NOFOLLOW
+  UGC
+  SPONSORED
+}
+
+enum ResponsibilityType {
+  PROVIDER
+  REQUESTER
+  SHARED
+}
+
+enum SubmissionStatus {
+  NOT_SUBMITTED
+  SUBMITTED
+  APPROVED
+  REJECTED
+  REVISION_REQUESTED
+}
+
+enum CancellationRequestStatus {
+  NONE
+  PENDING
+  ACCEPTED
+  REJECTED
+}
+
+enum CreditAdjustmentType {
+  REFUND
+  REVERSE
+  ADD
+}
+
+enum PlanTier {
+  FREE
+  SILVER
+  GOLD
+  PLATINUM
+  ENTERPRISE
+}
+
+enum BillingInterval {
+  MONTHLY
+  YEARLY
+}
+
+enum SubscriptionPlanVisibility {
+  MODARATE
+  HIGHER
+  MAXIMUM
+}

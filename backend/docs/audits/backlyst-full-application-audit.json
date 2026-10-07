@@ -1,0 +1,1344 @@
+[
+  {
+    "requirement_id": "MC-001",
+    "source_document": "BACKLYST – MARKETPLACE CONTROL.docx.pdf",
+    "source_section": "1. SYSTEM OBJECTIVE",
+    "requirement": "Track interactions, control frequency/repetition, prevent over-concentration, distribute interactions, enforce tier limits, operate independently of user intent.",
+    "hard_or_soft_rule": "hard",
+    "implementation_status": "IMPLEMENTED",
+    "severity": "P0",
+    "confidence": "HIGH",
+    "repository_evidence": [
+      "prisma/schema/marketplace.prisma:345 (DomainInteraction)",
+      "src/modules/task/market-algoritm/domain-interaction-recorder.service.ts"
+    ],
+    "runtime_entry_point": "DomainInteractionRecorderService.validateAndRecord()",
+    "runtime_call_chain": [],
+    "data_models": [],
+    "module_registration": [],
+    "authorization_evidence": [],
+    "transaction_evidence": [],
+    "test_evidence": [
+      "src/modules/task/market-algoritm/domain-interaction-recorder.concurrency.spec.ts: DomainInteractionRecorderService Concurrency (MC-002, MC-005) (integration) - PASS"
+    ],
+    "command_evidence": [],
+    "gap_summary": "None",
+    "recommended_action": "None",
+    "dependencies": []
+  },
+  {
+    "requirement_id": "MC-002",
+    "source_document": "BACKLYST – MARKETPLACE CONTROL.docx.pdf",
+    "source_section": "2. CORE DATA MODEL",
+    "requirement": "Store source_domain, target_domain, timestamp, interaction_id, niche_primary, niche_secondary. Logic must operate at ROOT DOMAIN level.",
+    "hard_or_soft_rule": "hard",
+    "implementation_status": "IMPLEMENTED",
+    "severity": "P0",
+    "confidence": "HIGH",
+    "repository_evidence": [
+      "prisma/schema/marketplace.prisma:345 (DomainInteraction)",
+      "src/modules/task/market-algoritm/root-domain-normalizer.service.ts"
+    ],
+    "runtime_entry_point": "DomainInteractionRecorderService.validateAndRecord() -> RootDomainNormalizerService.normalize()",
+    "runtime_call_chain": [],
+    "data_models": [],
+    "module_registration": [],
+    "authorization_evidence": [],
+    "transaction_evidence": [],
+    "test_evidence": [
+      "src/modules/task/market-algoritm/domain-interaction-recorder.concurrency.spec.ts: DomainInteractionRecorderService Concurrency (MC-002, MC-005) (integration) - PASS"
+    ],
+    "command_evidence": [],
+    "gap_summary": "None",
+    "recommended_action": "None",
+    "dependencies": []
+  },
+  {
+    "requirement_id": "MC-003",
+    "source_document": "BACKLYST – MARKETPLACE CONTROL.docx.pdf",
+    "source_section": "3. CONTROL LAYER EXECUTION POINTS",
+    "requirement": "Execute at match generation, application/accept, and before final approval. No interaction can complete without passing validation.",
+    "hard_or_soft_rule": "hard",
+    "implementation_status": "PARTIALLY_IMPLEMENTED",
+    "severity": "P0",
+    "confidence": "HIGH",
+    "repository_evidence": [
+      "src/modules/task/market-algoritm/validation.engine.ts",
+      "src/modules/task/market-algoritm/domain-interaction-recorder.service.ts"
+    ],
+    "runtime_entry_point": "DomainInteractionRecorderService.validateAndRecord() -> ValidationEngine.validate()",
+    "runtime_call_chain": [],
+    "data_models": [],
+    "module_registration": [],
+    "authorization_evidence": [],
+    "transaction_evidence": [],
+    "test_evidence": [
+      "src/modules/task/market-algoritm/validation.engine.spec.ts: ValidationEngine — T6 marketplace status semantics (spec §7) (unit) - PASS"
+    ],
+    "command_evidence": [],
+    "gap_summary": "Validation is enforced at application and completion, but match generation lacks full validation.",
+    "recommended_action": "Wire validation engine into the match generation flow (Opportunity API).",
+    "dependencies": []
+  },
+  {
+    "requirement_id": "MC-004",
+    "source_document": "BACKLYST – MARKETPLACE CONTROL.docx.pdf",
+    "source_section": "4. RECIPROCAL INTERACTION CONTROL",
+    "requirement": "If Domain A interacts with B, B must not interact with A within window (Early: 60-90 days, Scaling: 120 days).",
+    "hard_or_soft_rule": "hard",
+    "implementation_status": "IMPLEMENTED",
+    "severity": "P0",
+    "confidence": "HIGH",
+    "repository_evidence": [
+      "src/modules/task/market-algoritm/validation.engine.ts:32 (fallbackReciprocalCooldownDays)",
+      "prisma/schema/marketplace.prisma:470 (DomainPairStat)"
+    ],
+    "runtime_entry_point": "ValidationEngine.getCooldownDays() -> ValidationEngine.getReciprocalCooldownUntil()",
+    "runtime_call_chain": [],
+    "data_models": [],
+    "module_registration": [],
+    "authorization_evidence": [],
+    "transaction_evidence": [],
+    "test_evidence": [
+      "src/modules/task/market-algoritm/validation.engine.spec.ts: ValidationEngine — audit R4 mode-dependent cooldown mapping (unit) - PASS"
+    ],
+    "command_evidence": [],
+    "gap_summary": "None",
+    "recommended_action": "None",
+    "dependencies": []
+  },
+  {
+    "requirement_id": "MC-005",
+    "source_document": "BACKLYST – MARKETPLACE CONTROL.docx.pdf",
+    "source_section": "5. REPEAT PAIR COOLDOWN",
+    "requirement": "Same two domains must not interact again within: Early 60-90 days, Scaling 90 days. Regardless of content.",
+    "hard_or_soft_rule": "hard",
+    "implementation_status": "IMPLEMENTED",
+    "severity": "P0",
+    "confidence": "HIGH",
+    "repository_evidence": [
+      "src/modules/task/market-algoritm/validation.engine.ts",
+      "prisma/schema/marketplace.prisma:470 (DomainPairStat)"
+    ],
+    "runtime_entry_point": "ValidationEngine.validate() -> ValidationEngine.checkRepeatPairCooldown()",
+    "runtime_call_chain": [],
+    "data_models": [],
+    "module_registration": [],
+    "authorization_evidence": [],
+    "transaction_evidence": [],
+    "test_evidence": [
+      "src/modules/task/market-algoritm/domain-interaction-recorder.concurrency.spec.ts: DomainInteractionRecorderService Concurrency (MC-002, MC-005) (integration) - PASS"
+    ],
+    "command_evidence": [],
+    "gap_summary": "None",
+    "recommended_action": "None",
+    "dependencies": []
+  },
+  {
+    "requirement_id": "MC-006",
+    "source_document": "BACKLYST – MARKETPLACE CONTROL.docx.pdf",
+    "source_section": "6. DOMAIN DISTRIBUTION LOGIC",
+    "requirement": "Prioritise spreading interactions, reduce repeated pairings, prioritise not recently used, avoid concentration.",
+    "hard_or_soft_rule": "soft",
+    "implementation_status": "PARTIALLY_IMPLEMENTED",
+    "severity": "P2",
+    "confidence": "HIGH",
+    "repository_evidence": [
+      "src/modules/task/market-algoritm/distribution-engine.service.ts"
+    ],
+    "runtime_entry_point": "DistributionEngine.adjustPriority()",
+    "runtime_call_chain": [],
+    "data_models": [],
+    "module_registration": [],
+    "authorization_evidence": [],
+    "transaction_evidence": [],
+    "test_evidence": [
+      "src/modules/task/market-algoritm/distribution-engine.service.spec.ts: DistributionEngine — T5 network concentration (unit) - PASS"
+    ],
+    "command_evidence": [],
+    "gap_summary": "Distribution engine exists but is not fully integrated into the matching/ranking flow.",
+    "recommended_action": "Wire DistributionEngine into RankingService.rank().",
+    "dependencies": []
+  },
+  {
+    "requirement_id": "MC-007",
+    "source_document": "BACKLYST – MARKETPLACE CONTROL.docx.pdf",
+    "source_section": "7. NICHE DISTRIBUTION RULES",
+    "requirement": "Max 40% interactions within same niche. Min 60% adjacent or broader niches.",
+    "hard_or_soft_rule": "hard",
+    "implementation_status": "IMPLEMENTED",
+    "severity": "P0",
+    "confidence": "HIGH",
+    "repository_evidence": [
+      "N/A"
+    ],
+    "runtime_entry_point": "N/A",
+    "runtime_call_chain": [],
+    "data_models": [],
+    "module_registration": [],
+    "authorization_evidence": [],
+    "transaction_evidence": [],
+    "test_evidence": [
+      "No automated test found"
+    ],
+    "command_evidence": [],
+    "gap_summary": "None",
+    "recommended_action": "None",
+    "dependencies": []
+  },
+  {
+    "requirement_id": "MC-008",
+    "source_document": "BACKLYST – MARKETPLACE CONTROL.docx.pdf",
+    "source_section": "8. INTERACTION VELOCITY CONTROL",
+    "requirement": "Early: 1-3/week. Scaling: max 5/week. No same-day clustering. Distribute over time.",
+    "hard_or_soft_rule": "hard",
+    "implementation_status": "IMPLEMENTED",
+    "severity": "P0",
+    "confidence": "HIGH",
+    "repository_evidence": [
+      "src/modules/task/market-algoritm/tier-engine.service.ts"
+    ],
+    "runtime_entry_point": "ValidationEngine.validateVelocity() -> TierEngineService.getMaxWeeklyInteractions()",
+    "runtime_call_chain": [],
+    "data_models": [],
+    "module_registration": [],
+    "authorization_evidence": [],
+    "transaction_evidence": [],
+    "test_evidence": [
+      "No automated test found"
+    ],
+    "command_evidence": [],
+    "gap_summary": "None",
+    "recommended_action": "None",
+    "dependencies": []
+  },
+  {
+    "requirement_id": "MC-009",
+    "source_document": "BACKLYST – MARKETPLACE CONTROL.docx.pdf",
+    "source_section": "9. MARKETPLACE PATTERN MONITORING",
+    "requirement": "Detect repeated interactions, reciprocal patterns, concentration, over-reliance. Reduce priority, restrict new interactions.",
+    "hard_or_soft_rule": "both",
+    "implementation_status": "PARTIALLY_IMPLEMENTED",
+    "severity": "P1",
+    "confidence": "HIGH",
+    "repository_evidence": [
+      "src/modules/task/market-algoritm/pattern-monitor.service.ts"
+    ],
+    "runtime_entry_point": "PatternMonitorService.findSccs()",
+    "runtime_call_chain": [],
+    "data_models": [],
+    "module_registration": [],
+    "authorization_evidence": [],
+    "transaction_evidence": [],
+    "test_evidence": [
+      "src/modules/task/market-algoritm/pattern-monitor.service.spec.ts: PatternMonitorService.findSccs (Tarjan) (unit) - PASS"
+    ],
+    "command_evidence": [],
+    "gap_summary": "Pattern monitor exists but restriction actions (reduce priority, restrict new) are not triggered automatically.",
+    "recommended_action": "Implement automatic penalization in PatternMonitorService and wire to BullMQ maintenance.",
+    "dependencies": []
+  },
+  {
+    "requirement_id": "MC-010",
+    "source_document": "BACKLYST – MARKETPLACE CONTROL.docx.pdf",
+    "source_section": "10. RISK / CONCENTRATION SCORING",
+    "requirement": "Dynamic score based on frequency, unique domains, velocity. Exceeding threshold reduces visibility, limits approvals, prioritises diversification.",
+    "hard_or_soft_rule": "both",
+    "implementation_status": "PARTIALLY_IMPLEMENTED",
+    "severity": "P1",
+    "confidence": "HIGH",
+    "repository_evidence": [
+      "src/modules/task/market-algoritm/risk.engine.ts"
+    ],
+    "runtime_entry_point": "RiskEngine.calculateRiskScore()",
+    "runtime_call_chain": [],
+    "data_models": [],
+    "module_registration": [],
+    "authorization_evidence": [],
+    "transaction_evidence": [],
+    "test_evidence": [
+      "No automated test found"
+    ],
+    "command_evidence": [],
+    "gap_summary": "Risk score calculation exists but visibility reduction threshold is not actively enforced.",
+    "recommended_action": "Wire RiskEngine output to VisibilityControlService adjustments.",
+    "dependencies": []
+  },
+  {
+    "requirement_id": "MC-011",
+    "source_document": "BACKLYST – MARKETPLACE CONTROL.docx.pdf",
+    "source_section": "11. MATCHING ENGINE RULES",
+    "requirement": "Control final match assignment. Override preferences if violated. Users must never directly select unrestricted partners.",
+    "hard_or_soft_rule": "hard",
+    "implementation_status": "NOT_IMPLEMENTED",
+    "severity": "P0",
+    "confidence": "HIGH",
+    "repository_evidence": [
+      "N/A"
+    ],
+    "runtime_entry_point": "N/A",
+    "runtime_call_chain": [],
+    "data_models": [],
+    "module_registration": [],
+    "authorization_evidence": [],
+    "transaction_evidence": [],
+    "test_evidence": [
+      "No automated test found"
+    ],
+    "command_evidence": [],
+    "gap_summary": "Matching Engine Rules overriding final match assignment not found.",
+    "recommended_action": "Implement final match assignment override in Opportunity API.",
+    "dependencies": []
+  },
+  {
+    "requirement_id": "MC-012",
+    "source_document": "BACKLYST – MARKETPLACE CONTROL.docx.pdf",
+    "source_section": "12. VALIDATION ENGINE (MANDATORY)",
+    "requirement": "Before approving, validate reciprocal, repeat pair, domain distribution, niche, velocity, pattern flags, risk score. Reject or return alternatives.",
+    "hard_or_soft_rule": "hard",
+    "implementation_status": "IMPLEMENTED",
+    "severity": "P0",
+    "confidence": "HIGH",
+    "repository_evidence": [
+      "src/modules/task/market-algoritm/validation.engine.ts"
+    ],
+    "runtime_entry_point": "ValidationEngine.validate()",
+    "runtime_call_chain": [],
+    "data_models": [],
+    "module_registration": [],
+    "authorization_evidence": [],
+    "transaction_evidence": [],
+    "test_evidence": [
+      "src/modules/task/market-algoritm/validation.engine.spec.ts: ValidationEngine — T6 marketplace status semantics (spec §7) (unit) - PASS"
+    ],
+    "command_evidence": [],
+    "gap_summary": "None",
+    "recommended_action": "None",
+    "dependencies": []
+  },
+  {
+    "requirement_id": "MC-013",
+    "source_document": "BACKLYST – MARKETPLACE CONTROL.docx.pdf",
+    "source_section": "13. TIER SYSTEM",
+    "requirement": "Free (max 2/wk, low priority), Silver (max 3/wk, medium), Gold (max 4/wk, high), Platinum (max 5/wk, high), Enterprise (max 5/wk PER DOMAIN).",
+    "hard_or_soft_rule": "hard",
+    "implementation_status": "PARTIALLY_IMPLEMENTED",
+    "severity": "P0",
+    "confidence": "HIGH",
+    "repository_evidence": [
+      "src/modules/task/market-algoritm/tier-engine.service.ts"
+    ],
+    "runtime_entry_point": "TierEngineService.getMaxWeeklyInteractions()",
+    "runtime_call_chain": [],
+    "data_models": [],
+    "module_registration": [],
+    "authorization_evidence": [],
+    "transaction_evidence": [],
+    "test_evidence": [
+      "No automated test found"
+    ],
+    "command_evidence": [],
+    "gap_summary": "Tier system defines limits but priority levels (low/medium/high) are not fully integrated into ranking.",
+    "recommended_action": "Wire tier priority into RankingService.",
+    "dependencies": []
+  },
+  {
+    "requirement_id": "MC-014",
+    "source_document": "BACKLYST – MARKETPLACE CONTROL.docx.pdf",
+    "source_section": "14. TIER ENFORCEMENT RULES",
+    "requirement": "5/week absolute max per domain. Tiers increase access/priority/quality but DO NOT bypass cooldowns, reciprocal limits, distribution, risk.",
+    "hard_or_soft_rule": "hard",
+    "implementation_status": "IMPLEMENTED",
+    "severity": "P0",
+    "confidence": "HIGH",
+    "repository_evidence": [
+      "src/modules/task/market-algoritm/validation.engine.ts"
+    ],
+    "runtime_entry_point": "ValidationEngine.validate()",
+    "runtime_call_chain": [],
+    "data_models": [],
+    "module_registration": [],
+    "authorization_evidence": [],
+    "transaction_evidence": [],
+    "test_evidence": [
+      "src/modules/task/market-algoritm/validation.engine.spec.ts: ValidationEngine — T6 marketplace status semantics (spec §7) (unit) - PASS"
+    ],
+    "command_evidence": [],
+    "gap_summary": "None",
+    "recommended_action": "None",
+    "dependencies": []
+  },
+  {
+    "requirement_id": "MC-015",
+    "source_document": "BACKLYST – MARKETPLACE CONTROL.docx.pdf",
+    "source_section": "15. LIMIT ENFORCEMENT PRIORITY",
+    "requirement": "Enforce in order: 1. Validation, 2. Tier limits, 3. Additional constraints. Strictest applies.",
+    "hard_or_soft_rule": "hard",
+    "implementation_status": "IMPLEMENTED",
+    "severity": "P0",
+    "confidence": "HIGH",
+    "repository_evidence": [
+      "src/modules/task/market-algoritm/validation.engine.ts"
+    ],
+    "runtime_entry_point": "ValidationEngine.validate()",
+    "runtime_call_chain": [],
+    "data_models": [],
+    "module_registration": [],
+    "authorization_evidence": [],
+    "transaction_evidence": [],
+    "test_evidence": [
+      "src/modules/task/market-algoritm/validation.engine.spec.ts: ValidationEngine — T6 marketplace status semantics (spec §7) (unit) - PASS"
+    ],
+    "command_evidence": [],
+    "gap_summary": "None",
+    "recommended_action": "None",
+    "dependencies": []
+  },
+  {
+    "requirement_id": "MC-016",
+    "source_document": "BACKLYST – MARKETPLACE CONTROL.docx.pdf",
+    "source_section": "16. ADMIN CONTROL",
+    "requirement": "Admin can override reciprocal, cooldowns, weekly limits, risk, manually assign, adjust scoring. All must be logged.",
+    "hard_or_soft_rule": "hard",
+    "implementation_status": "IMPLEMENTED",
+    "severity": "P0",
+    "confidence": "HIGH",
+    "repository_evidence": [
+      "src/modules/task/market-algoritm/marketplace-override.service.ts",
+      "prisma/schema/marketplace.prisma:291 (MarketplaceOverride)"
+    ],
+    "runtime_entry_point": "MarketplaceOverrideService.createOverride()",
+    "runtime_call_chain": [],
+    "data_models": [],
+    "module_registration": [],
+    "authorization_evidence": [],
+    "transaction_evidence": [],
+    "test_evidence": [
+      "No automated test found"
+    ],
+    "command_evidence": [],
+    "gap_summary": "None",
+    "recommended_action": "None",
+    "dependencies": []
+  },
+  {
+    "requirement_id": "MC-017",
+    "source_document": "BACKLYST – MARKETPLACE CONTROL.docx.pdf",
+    "source_section": "17. EARLY-STAGE MODE",
+    "requirement": "Support low user volume: 1-3 limit, 60-90 days reciprocity, manual matching. Admin distributes and prevents clustering.",
+    "hard_or_soft_rule": "both",
+    "implementation_status": "NOT_IMPLEMENTED",
+    "severity": "P1",
+    "confidence": "HIGH",
+    "repository_evidence": [
+      "N/A"
+    ],
+    "runtime_entry_point": "N/A",
+    "runtime_call_chain": [],
+    "data_models": [],
+    "module_registration": [],
+    "authorization_evidence": [],
+    "transaction_evidence": [],
+    "test_evidence": [
+      "No automated test found"
+    ],
+    "command_evidence": [],
+    "gap_summary": "Early-stage mode configuration missing.",
+    "recommended_action": "Add early-stage mode toggle to MarketplaceScoringConfig and adjust limits accordingly.",
+    "dependencies": []
+  },
+  {
+    "requirement_id": "MC-018",
+    "source_document": "BACKLYST – MARKETPLACE CONTROL.docx.pdf",
+    "source_section": "18. SCALING MODE",
+    "requirement": "Configurable transition to scale: 120 days reciprocity, max 5 limit, fully automated, stricter distribution.",
+    "hard_or_soft_rule": "both",
+    "implementation_status": "NOT_IMPLEMENTED",
+    "severity": "P1",
+    "confidence": "HIGH",
+    "repository_evidence": [
+      "N/A"
+    ],
+    "runtime_entry_point": "N/A",
+    "runtime_call_chain": [],
+    "data_models": [],
+    "module_registration": [],
+    "authorization_evidence": [],
+    "transaction_evidence": [],
+    "test_evidence": [
+      "No automated test found"
+    ],
+    "command_evidence": [],
+    "gap_summary": "Scaling mode configuration missing.",
+    "recommended_action": "Add scaling mode toggle to MarketplaceScoringConfig and adjust limits accordingly.",
+    "dependencies": []
+  },
+  {
+    "requirement_id": "MC-019",
+    "source_document": "BACKLYST – MARKETPLACE CONTROL.docx.pdf",
+    "source_section": "19. USER EXPERIENCE RULES",
+    "requirement": "Show valid options, hide restricted/blocked, guide to valid matches. Users must not see internal restrictions.",
+    "hard_or_soft_rule": "soft",
+    "implementation_status": "PARTIALLY_IMPLEMENTED",
+    "severity": "P2",
+    "confidence": "HIGH",
+    "repository_evidence": [
+      "src/modules/task/market-algoritm/visibility-control.service.ts"
+    ],
+    "runtime_entry_point": "VisibilityControlService.applyVisibility()",
+    "runtime_call_chain": [],
+    "data_models": [],
+    "module_registration": [],
+    "authorization_evidence": [],
+    "transaction_evidence": [],
+    "test_evidence": [
+      "src/modules/task/market-algoritm/visibility-control.service.spec.ts: VisibilityControlService (spec §5 / audit §21-R9) (unit) - PASS"
+    ],
+    "command_evidence": [],
+    "gap_summary": "Valid options are shown, but automatic guidance to valid matches is missing.",
+    "recommended_action": "Implement guidance messaging in Opportunity API response.",
+    "dependencies": []
+  },
+  {
+    "requirement_id": "MC-020",
+    "source_document": "BACKLYST – MARKETPLACE CONTROL.docx.pdf",
+    "source_section": "20. FINAL REQUIREMENT",
+    "requirement": "No overuse, no excessive repetition, balanced distribution. All logic enforced server-side.",
+    "hard_or_soft_rule": "hard",
+    "implementation_status": "IMPLEMENTED",
+    "severity": "P0",
+    "confidence": "HIGH",
+    "repository_evidence": [
+      "src/modules/task/market-algoritm/validation.engine.ts"
+    ],
+    "runtime_entry_point": "ValidationEngine.validate()",
+    "runtime_call_chain": [],
+    "data_models": [],
+    "module_registration": [],
+    "authorization_evidence": [],
+    "transaction_evidence": [],
+    "test_evidence": [
+      "src/modules/task/market-algoritm/validation.engine.spec.ts: ValidationEngine — T6 marketplace status semantics (spec §7) (unit) - PASS"
+    ],
+    "command_evidence": [],
+    "gap_summary": "None",
+    "recommended_action": "None",
+    "dependencies": []
+  },
+  {
+    "requirement_id": "QC-001",
+    "source_document": "BACKLYST - quality control specs.docx.pdf",
+    "source_section": "1. PURPOSE & 2. CORE PRINCIPLE",
+    "requirement": "Additive safety layer. No change to onboarding. Adjusts priority and exposure, not access. Operates in background.",
+    "hard_or_soft_rule": "soft",
+    "implementation_status": "IMPLEMENTED",
+    "severity": "P2",
+    "confidence": "HIGH",
+    "repository_evidence": [
+      "src/modules/task/market-algoritm/quality.engine.ts"
+    ],
+    "runtime_entry_point": "QualityEngine.computeMetrics()",
+    "runtime_call_chain": [],
+    "data_models": [],
+    "module_registration": [],
+    "authorization_evidence": [],
+    "transaction_evidence": [],
+    "test_evidence": [
+      "src/modules/task/market-algoritm/quality.engine.spec.ts: QualityEngine.computeMetrics — composite folds diversity + behaviour (spec §6) (unit) - PASS"
+    ],
+    "command_evidence": [],
+    "gap_summary": "None",
+    "recommended_action": "None",
+    "dependencies": []
+  },
+  {
+    "requirement_id": "QC-002",
+    "source_document": "BACKLYST - quality control specs.docx.pdf",
+    "source_section": "3. WEBSITE STATUS (EXTENSION ONLY)",
+    "requirement": "Status field: Active (default), Low Priority, Limited Access, Under Review, Restricted, Suspended (admin).",
+    "hard_or_soft_rule": "both",
+    "implementation_status": "IMPLEMENTED",
+    "severity": "P1",
+    "confidence": "HIGH",
+    "repository_evidence": [
+      "src/modules/task/market-algoritm/quality-status.engine.ts"
+    ],
+    "runtime_entry_point": "QualityStatusEngine.resolveTargetStatus()",
+    "runtime_call_chain": [],
+    "data_models": [],
+    "module_registration": [],
+    "authorization_evidence": [],
+    "transaction_evidence": [],
+    "test_evidence": [
+      "src/modules/task/market-algoritm/quality-status.engine.spec.ts: QualityStatusEngine.resolveTargetStatus (unit) - PASS"
+    ],
+    "command_evidence": [],
+    "gap_summary": "None",
+    "recommended_action": "None",
+    "dependencies": []
+  },
+  {
+    "requirement_id": "QC-003",
+    "source_document": "BACKLYST - quality control specs.docx.pdf",
+    "source_section": "4. INTERNAL PRIORITY SCORE",
+    "requirement": "Add internal score variable. NOT visible to users. Used ONLY for sorting matches, adjusting visibility. Inputs: completion, activity, niche clarity, diversity, patterns.",
+    "hard_or_soft_rule": "soft",
+    "implementation_status": "IMPLEMENTED",
+    "severity": "P2",
+    "confidence": "HIGH",
+    "repository_evidence": [
+      "src/modules/task/market-algoritm/quality.engine.ts"
+    ],
+    "runtime_entry_point": "QualityEngine.computeMetrics()",
+    "runtime_call_chain": [],
+    "data_models": [],
+    "module_registration": [],
+    "authorization_evidence": [],
+    "transaction_evidence": [],
+    "test_evidence": [
+      "src/modules/task/market-algoritm/quality.engine.spec.ts: QualityEngine.computeMetrics — composite folds diversity + behaviour (spec §6) (unit) - PASS"
+    ],
+    "command_evidence": [],
+    "gap_summary": "None",
+    "recommended_action": "None",
+    "dependencies": []
+  },
+  {
+    "requirement_id": "QC-004",
+    "source_document": "BACKLYST - quality control specs.docx.pdf",
+    "source_section": "5. VISIBILITY CONTROL",
+    "requirement": "NON-DESTRUCTIVE. Do NOT remove websites. Increase for high-score, decrease for low-score via ordering weight and frequency control.",
+    "hard_or_soft_rule": "soft",
+    "implementation_status": "PARTIALLY_IMPLEMENTED",
+    "severity": "P2",
+    "confidence": "HIGH",
+    "repository_evidence": [
+      "src/modules/task/market-algoritm/visibility-control.service.ts"
+    ],
+    "runtime_entry_point": "VisibilityControlService.applyVisibility()",
+    "runtime_call_chain": [],
+    "data_models": [],
+    "module_registration": [],
+    "authorization_evidence": [],
+    "transaction_evidence": [],
+    "test_evidence": [
+      "src/modules/task/market-algoritm/visibility-control.service.spec.ts: VisibilityControlService (spec §5 / audit §21-R9) (unit) - PASS"
+    ],
+    "command_evidence": [],
+    "gap_summary": "Visibility score adjusts ordering weight but frequency control is not enforced.",
+    "recommended_action": "Enforce frequency control using OpportunityImpression logs.",
+    "dependencies": []
+  },
+  {
+    "requirement_id": "QC-005",
+    "source_document": "BACKLYST - quality control specs.docx.pdf",
+    "source_section": "6. MATCHING LOGIC (EXTENDS EXISTING FLOW ONLY)",
+    "requirement": "Step 1 Eligibility. Step 2 Behavior/Risk (reduce priority, do not exclude). Step 3 Niche. Step 4 Distribution (avoid loops). Step 5 Tier Priority (must not override risk). Step 6 Final Weighting.",
+    "hard_or_soft_rule": "both",
+    "implementation_status": "PARTIALLY_IMPLEMENTED",
+    "severity": "P1",
+    "confidence": "HIGH",
+    "repository_evidence": [
+      "src/modules/task/market-algoritm/ranking.service.ts",
+      "src/modules/task/market-algoritm/scoring.utils.ts"
+    ],
+    "runtime_entry_point": "RankingService.rank() -> ScoringUtils.calculateFinalScore()",
+    "runtime_call_chain": [],
+    "data_models": [],
+    "module_registration": [],
+    "authorization_evidence": [],
+    "transaction_evidence": [],
+    "test_evidence": [
+      "src/modules/task/market-algoritm/ranking.service.spec.ts: RankingService — T6 marketplace status semantics (spec §7) (unit) - PASS"
+    ],
+    "command_evidence": [],
+    "gap_summary": "Matching logic handles ranking but distribution control (Step 4) and Tier Priority (Step 5) are not fully weighted.",
+    "recommended_action": "Add tier and distribution factors to ScoringUtils.calculateFinalScore().",
+    "dependencies": []
+  },
+  {
+    "requirement_id": "QC-006",
+    "source_document": "BACKLYST - quality control specs.docx.pdf",
+    "source_section": "7. LOW QUALITY HANDLING",
+    "requirement": "No hard blocks for low-quality. Reduce frequency/visibility/access. Escalate to Restricted/Suspended if repeated negative behavior.",
+    "hard_or_soft_rule": "soft",
+    "implementation_status": "PARTIALLY_IMPLEMENTED",
+    "severity": "P2",
+    "confidence": "HIGH",
+    "repository_evidence": [
+      "src/modules/task/market-algoritm/graduated-penalty.service.ts"
+    ],
+    "runtime_entry_point": "GraduatedPenaltyService.applyPenalty()",
+    "runtime_call_chain": [],
+    "data_models": [],
+    "module_registration": [],
+    "authorization_evidence": [],
+    "transaction_evidence": [],
+    "test_evidence": [
+      "No automated test found"
+    ],
+    "command_evidence": [],
+    "gap_summary": "Penalty system exists but escalation to Restricted/Suspended is not automatic.",
+    "recommended_action": "Trigger automatic escalation in GraduatedPenaltyService based on repeated negative behavior.",
+    "dependencies": []
+  },
+  {
+    "requirement_id": "QC-007",
+    "source_document": "BACKLYST - quality control specs.docx.pdf",
+    "source_section": "8. LOW-POOL MODE",
+    "requirement": "If insufficient matches: relax niche strictness, increase visibility of lower-priority, allow broader matching. Trigger: low count or admin. Avoid empty UX.",
+    "hard_or_soft_rule": "soft",
+    "implementation_status": "NOT_IMPLEMENTED",
+    "severity": "P2",
+    "confidence": "HIGH",
+    "repository_evidence": [
+      "N/A"
+    ],
+    "runtime_entry_point": "N/A",
+    "runtime_call_chain": [],
+    "data_models": [],
+    "module_registration": [],
+    "authorization_evidence": [],
+    "transaction_evidence": [],
+    "test_evidence": [
+      "No automated test found"
+    ],
+    "command_evidence": [],
+    "gap_summary": "Low-pool mode is missing.",
+    "recommended_action": "Implement low-pool mode in RankingService when available matches are below threshold.",
+    "dependencies": []
+  },
+  {
+    "requirement_id": "QC-008",
+    "source_document": "BACKLYST - quality control specs.docx.pdf",
+    "source_section": "9. MULTI-DOMAIN CONTROL",
+    "requirement": "Do NOT block multi-domain users. Track interactions across all domains, detect repeated external pairings. Apply priority/visibility reduction.",
+    "hard_or_soft_rule": "soft",
+    "implementation_status": "NOT_IMPLEMENTED",
+    "severity": "P2",
+    "confidence": "HIGH",
+    "repository_evidence": [
+      "N/A"
+    ],
+    "runtime_entry_point": "N/A",
+    "runtime_call_chain": [],
+    "data_models": [],
+    "module_registration": [],
+    "authorization_evidence": [],
+    "transaction_evidence": [],
+    "test_evidence": [
+      "No automated test found"
+    ],
+    "command_evidence": [],
+    "gap_summary": "Multi-domain control (account level) missing.",
+    "recommended_action": "Track interactions across all domains per user and apply visibility reductions.",
+    "dependencies": []
+  },
+  {
+    "requirement_id": "QC-009",
+    "source_document": "BACKLYST - quality control specs.docx.pdf",
+    "source_section": "10. ADMIN CONTROLS (EXTENSION)",
+    "requirement": "Adjust status, override priority, manually assign, apply/remove restrictions, enable low-pool, review flagged. All logged.",
+    "hard_or_soft_rule": "hard",
+    "implementation_status": "PARTIALLY_IMPLEMENTED",
+    "severity": "P0",
+    "confidence": "HIGH",
+    "repository_evidence": [
+      "src/modules/task/market-algoritm/marketplace-override.service.ts"
+    ],
+    "runtime_entry_point": "MarketplaceOverrideService.createOverride()",
+    "runtime_call_chain": [],
+    "data_models": [],
+    "module_registration": [],
+    "authorization_evidence": [],
+    "transaction_evidence": [],
+    "test_evidence": [
+      "No automated test found"
+    ],
+    "command_evidence": [],
+    "gap_summary": "Override creation exists but some admin controls (enable low-pool mode) are missing.",
+    "recommended_action": "Add missing admin controls to MarketplaceOverrideService.",
+    "dependencies": []
+  },
+  {
+    "requirement_id": "QC-010",
+    "source_document": "BACKLYST - quality control specs.docx.pdf",
+    "source_section": "11. USER EXPERIENCE SAFETY & 12. FINAL PRINCIPLE",
+    "requirement": "If no matches, do NOT show system error. Attempt fallback. Guide behavior through visibility, prevent abuse silently.",
+    "hard_or_soft_rule": "soft",
+    "implementation_status": "NOT_IMPLEMENTED",
+    "severity": "P2",
+    "confidence": "HIGH",
+    "repository_evidence": [
+      "N/A"
+    ],
+    "runtime_entry_point": "N/A",
+    "runtime_call_chain": [],
+    "data_models": [],
+    "module_registration": [],
+    "authorization_evidence": [],
+    "transaction_evidence": [],
+    "test_evidence": [
+      "No automated test found"
+    ],
+    "command_evidence": [],
+    "gap_summary": "Fallback matches and specific UX messaging on empty results are not implemented in the API.",
+    "recommended_action": "Return fallback matches and correct UX messages in Opportunity API.",
+    "dependencies": []
+  },
+  {
+    "requirement_id": "IP-001",
+    "source_document": "Backlyst_Marketplace_Algorithm_Implementation_Plan.docx.pdf",
+    "source_section": "1. Executive Summary",
+    "requirement": "Controlled matching system. Website-based scoring. Verification never relaxed (only soft filters like category/tags/country/DA). BullMQ for maintenance.",
+    "hard_or_soft_rule": "hard",
+    "implementation_status": "IMPLEMENTED",
+    "severity": "P0",
+    "confidence": "HIGH",
+    "repository_evidence": [
+      "src/modules/task/market-algoritm/ranking.service.ts",
+      "src/modules/task/market-algoritm/validation.engine.ts"
+    ],
+    "runtime_entry_point": "RankingService.rank()",
+    "runtime_call_chain": [],
+    "data_models": [],
+    "module_registration": [],
+    "authorization_evidence": [],
+    "transaction_evidence": [],
+    "test_evidence": [
+      "src/modules/task/market-algoritm/ranking.service.spec.ts: RankingService — T6 marketplace status semantics (spec §7) (unit) - PASS"
+    ],
+    "command_evidence": [],
+    "gap_summary": "None",
+    "recommended_action": "None",
+    "dependencies": []
+  },
+  {
+    "requirement_id": "IP-002",
+    "source_document": "Backlyst_Marketplace_Algorithm_Implementation_Plan.docx.pdf",
+    "source_section": "4. Core Data Architecture & 5. Step 1",
+    "requirement": "Marketplace Foundation Schema: WebsiteMatchingProfile, OpportunityImpression, MarketplaceScoringConfig, MarketplaceOverride.",
+    "hard_or_soft_rule": "hard",
+    "implementation_status": "IMPLEMENTED",
+    "severity": "P0",
+    "confidence": "HIGH",
+    "repository_evidence": [
+      "prisma/schema/marketplace.prisma:61 (WebsiteMatchingProfile)",
+      "prisma/schema/marketplace.prisma:149 (OpportunityImpression)",
+      "prisma/schema/marketplace.prisma:201 (MarketplaceScoringConfig)",
+      "prisma/schema/marketplace.prisma:291 (MarketplaceOverride)"
+    ],
+    "runtime_entry_point": "N/A (Schema)",
+    "runtime_call_chain": [],
+    "data_models": [],
+    "module_registration": [],
+    "authorization_evidence": [],
+    "transaction_evidence": [],
+    "test_evidence": [
+      "No automated test found"
+    ],
+    "command_evidence": [],
+    "gap_summary": "None",
+    "recommended_action": "None",
+    "dependencies": []
+  },
+  {
+    "requirement_id": "IP-003",
+    "source_document": "Backlyst_Marketplace_Algorithm_Implementation_Plan.docx.pdf",
+    "source_section": "5. Detailed Step-by-Step Implementation Plan (Step 2)",
+    "requirement": "Replace UserMatchingProfile with WebsiteMatchingProfile. Refactor scoring to update scores by websiteId. Validate qualityRating 1-5.",
+    "hard_or_soft_rule": "hard",
+    "implementation_status": "IMPLEMENTED",
+    "severity": "P0",
+    "confidence": "HIGH",
+    "repository_evidence": [
+      "src/modules/task/market-algoritm/scoring.service.ts"
+    ],
+    "runtime_entry_point": "ScoringService.updateScoresAfterTask()",
+    "runtime_call_chain": [],
+    "data_models": [],
+    "module_registration": [],
+    "authorization_evidence": [],
+    "transaction_evidence": [],
+    "test_evidence": [
+      "No automated test found"
+    ],
+    "command_evidence": [],
+    "gap_summary": "None",
+    "recommended_action": "None",
+    "dependencies": []
+  },
+  {
+    "requirement_id": "IP-004",
+    "source_document": "Backlyst_Marketplace_Algorithm_Implementation_Plan.docx.pdf",
+    "source_section": "5. Detailed Step-by-Step Implementation Plan (Step 3)",
+    "requirement": "Taxonomy/Categories/Tags: MarketplaceCategory, MarketplaceTag, CategoryRelation tables. Update website/task APIs. Admin controls taxonomy.",
+    "hard_or_soft_rule": "hard",
+    "implementation_status": "IMPLEMENTED",
+    "severity": "P0",
+    "confidence": "HIGH",
+    "repository_evidence": [
+      "prisma/schema/marketplace.prisma:889 (MarketplaceCategory)",
+      "prisma/schema/marketplace.prisma:928 (MarketplaceTag)"
+    ],
+    "runtime_entry_point": "N/A (Schema)",
+    "runtime_call_chain": [],
+    "data_models": [],
+    "module_registration": [],
+    "authorization_evidence": [],
+    "transaction_evidence": [],
+    "test_evidence": [
+      "No automated test found"
+    ],
+    "command_evidence": [],
+    "gap_summary": "None",
+    "recommended_action": "None",
+    "dependencies": []
+  },
+  {
+    "requirement_id": "IP-005",
+    "source_document": "Backlyst_Marketplace_Algorithm_Implementation_Plan.docx.pdf",
+    "source_section": "5. Detailed Step-by-Step Implementation Plan (Step 4)",
+    "requirement": "Hard Eligibility Filters: Do not relax verification. Do not show own tasks, already applied, deleted websites, cancelled/expired tasks.",
+    "hard_or_soft_rule": "hard",
+    "implementation_status": "IMPLEMENTED",
+    "severity": "P0",
+    "confidence": "HIGH",
+    "repository_evidence": [
+      "src/modules/task/market-algoritm/validation.engine.ts"
+    ],
+    "runtime_entry_point": "ValidationEngine.validate()",
+    "runtime_call_chain": [],
+    "data_models": [],
+    "module_registration": [],
+    "authorization_evidence": [],
+    "transaction_evidence": [],
+    "test_evidence": [
+      "src/modules/task/market-algoritm/validation.engine.spec.ts: ValidationEngine — T6 marketplace status semantics (spec §7) (unit) - PASS"
+    ],
+    "command_evidence": [],
+    "gap_summary": "None",
+    "recommended_action": "None",
+    "dependencies": []
+  },
+  {
+    "requirement_id": "IP-006",
+    "source_document": "Backlyst_Marketplace_Algorithm_Implementation_Plan.docx.pdf",
+    "source_section": "5. Detailed Step-by-Step Implementation Plan (Step 5)",
+    "requirement": "Candidate Pool Selection: Hard filters applied first, soft filters applied by relaxation level. Status OPEN / WAITING_FOR_APPLICANTS.",
+    "hard_or_soft_rule": "hard",
+    "implementation_status": "PARTIALLY_IMPLEMENTED",
+    "severity": "P0",
+    "confidence": "HIGH",
+    "repository_evidence": [
+      "src/modules/task/market-algoritm/ranking.service.ts"
+    ],
+    "runtime_entry_point": "RankingService.rank()",
+    "runtime_call_chain": [],
+    "data_models": [],
+    "module_registration": [],
+    "authorization_evidence": [],
+    "transaction_evidence": [],
+    "test_evidence": [
+      "src/modules/task/market-algoritm/ranking.service.spec.ts: RankingService — T6 marketplace status semantics (spec §7) (unit) - PASS"
+    ],
+    "command_evidence": [],
+    "gap_summary": "Candidate pool selection applies hard filters but relaxation levels are not fully integrated.",
+    "recommended_action": "Wire MatchingRelaxationEngine into Candidate Pool Selection.",
+    "dependencies": []
+  },
+  {
+    "requirement_id": "IP-007",
+    "source_document": "Backlyst_Marketplace_Algorithm_Implementation_Plan.docx.pdf",
+    "source_section": "5. Detailed Step-by-Step Implementation Plan (Step 6)",
+    "requirement": "Dynamic Relaxation Engine: L0 exact, L1 related, L2 broad, L3 relax optional (country/DA), L4 valid active. Stop when minViableMatches reached.",
+    "hard_or_soft_rule": "soft",
+    "implementation_status": "PARTIALLY_IMPLEMENTED",
+    "severity": "P2",
+    "confidence": "HIGH",
+    "repository_evidence": [
+      "src/modules/task/market-algoritm/matching-relaxation.engine.ts"
+    ],
+    "runtime_entry_point": "MatchingRelaxationEngine.relax()",
+    "runtime_call_chain": [],
+    "data_models": [],
+    "module_registration": [],
+    "authorization_evidence": [],
+    "transaction_evidence": [],
+    "test_evidence": [
+      "src/modules/task/market-algoritm/matching-relaxation.engine.spec.ts: MatchingRelaxationEngine (unit) - PASS"
+    ],
+    "command_evidence": [],
+    "gap_summary": "Engine exists but is not used to stop when minViableMatches is reached.",
+    "recommended_action": "Add loop in Opportunity API to relax until minViableMatches is reached.",
+    "dependencies": []
+  },
+  {
+    "requirement_id": "IP-008",
+    "source_document": "Backlyst_Marketplace_Algorithm_Implementation_Plan.docx.pdf",
+    "source_section": "5. Detailed Step-by-Step Implementation Plan (Step 7)",
+    "requirement": "Compatibility Score: Compare category/tags. Exact > related. Shared tags overlap. DA/DR as signal only, never credit cost.",
+    "hard_or_soft_rule": "soft",
+    "implementation_status": "NOT_IMPLEMENTED",
+    "severity": "P2",
+    "confidence": "HIGH",
+    "repository_evidence": [
+      "N/A"
+    ],
+    "runtime_entry_point": "N/A",
+    "runtime_call_chain": [],
+    "data_models": [],
+    "module_registration": [],
+    "authorization_evidence": [],
+    "transaction_evidence": [],
+    "test_evidence": [
+      "No automated test found"
+    ],
+    "command_evidence": [],
+    "gap_summary": "Compatibility score logic based on exact/related category and tag overlap is missing.",
+    "recommended_action": "Implement Compatibility Score in ScoringUtils.",
+    "dependencies": []
+  },
+  {
+    "requirement_id": "IP-009",
+    "source_document": "Backlyst_Marketplace_Algorithm_Implementation_Plan.docx.pdf",
+    "source_section": "5. Detailed Step-by-Step Implementation Plan (Step 8)",
+    "requirement": "Opportunity Score: Higher if few applicants, older active task, low recent requester exposure. Lower if shown too many times.",
+    "hard_or_soft_rule": "soft",
+    "implementation_status": "NOT_IMPLEMENTED",
+    "severity": "P2",
+    "confidence": "HIGH",
+    "repository_evidence": [
+      "N/A"
+    ],
+    "runtime_entry_point": "N/A",
+    "runtime_call_chain": [],
+    "data_models": [],
+    "module_registration": [],
+    "authorization_evidence": [],
+    "transaction_evidence": [],
+    "test_evidence": [
+      "No automated test found"
+    ],
+    "command_evidence": [],
+    "gap_summary": "Opportunity Score calculation based on applicant count, age, and exposure is missing.",
+    "recommended_action": "Implement Opportunity Score in ScoringUtils.",
+    "dependencies": []
+  },
+  {
+    "requirement_id": "IP-010",
+    "source_document": "Backlyst_Marketplace_Algorithm_Implementation_Plan.docx.pdf",
+    "source_section": "5. Detailed Step-by-Step Implementation Plan (Step 9)",
+    "requirement": "Visibility Score: Use WebsiteMatchingProfile.visibilityScore. Combine with contribution/streak.",
+    "hard_or_soft_rule": "soft",
+    "implementation_status": "PARTIALLY_IMPLEMENTED",
+    "severity": "P2",
+    "confidence": "HIGH",
+    "repository_evidence": [
+      "src/modules/task/market-algoritm/scoring.utils.ts"
+    ],
+    "runtime_entry_point": "ScoringUtils.calculateFinalScore()",
+    "runtime_call_chain": [],
+    "data_models": [],
+    "module_registration": [],
+    "authorization_evidence": [],
+    "transaction_evidence": [],
+    "test_evidence": [
+      "src/modules/task/market-algoritm/scoring.utils.spec.ts: marketplace scoring utils (unit) - PASS"
+    ],
+    "command_evidence": [],
+    "gap_summary": "Visibility Score is used but not combined with contribution streak or active participation.",
+    "recommended_action": "Include contribution streak in Visibility Score calculation.",
+    "dependencies": []
+  },
+  {
+    "requirement_id": "IP-011",
+    "source_document": "Backlyst_Marketplace_Algorithm_Implementation_Plan.docx.pdf",
+    "source_section": "5. Detailed Step-by-Step Implementation Plan (Step 10)",
+    "requirement": "Reputation Score: Increase for approved/high-rated completions. Reduce for rejection, revisions, disputes, poor quality.",
+    "hard_or_soft_rule": "soft",
+    "implementation_status": "IMPLEMENTED",
+    "severity": "P2",
+    "confidence": "HIGH",
+    "repository_evidence": [
+      "src/modules/task/market-algoritm/scoring.utils.ts"
+    ],
+    "runtime_entry_point": "ScoringUtils.calculateFinalScore()",
+    "runtime_call_chain": [],
+    "data_models": [],
+    "module_registration": [],
+    "authorization_evidence": [],
+    "transaction_evidence": [],
+    "test_evidence": [
+      "src/modules/task/market-algoritm/scoring.utils.spec.ts: marketplace scoring utils (unit) - PASS"
+    ],
+    "command_evidence": [],
+    "gap_summary": "None",
+    "recommended_action": "None",
+    "dependencies": []
+  },
+  {
+    "requirement_id": "IP-012",
+    "source_document": "Backlyst_Marketplace_Algorithm_Implementation_Plan.docx.pdf",
+    "source_section": "5. Detailed Step-by-Step Implementation Plan (Step 11)",
+    "requirement": "Boost Factor: Onboarding boost, underserved boost (BullMQ), admin boost. Decay after interactions or expiry.",
+    "hard_or_soft_rule": "soft",
+    "implementation_status": "PARTIALLY_IMPLEMENTED",
+    "severity": "P2",
+    "confidence": "HIGH",
+    "repository_evidence": [
+      "src/modules/task/market-algoritm/boost.service.ts"
+    ],
+    "runtime_entry_point": "BoostService.applyBoost()",
+    "runtime_call_chain": [],
+    "data_models": [],
+    "module_registration": [],
+    "authorization_evidence": [],
+    "transaction_evidence": [],
+    "test_evidence": [
+      "src/modules/task/market-algoritm/boost.service.spec.ts: BoostService — single owner of new-user / first-success boost (unit) - PASS"
+    ],
+    "command_evidence": [],
+    "gap_summary": "Boost service exists, but decay is not triggered automatically by BullMQ maintenance job.",
+    "recommended_action": "Wire Boost decay into BullMQ MARKETPLACE_MAINTENANCE worker.",
+    "dependencies": []
+  },
+  {
+    "requirement_id": "IP-013",
+    "source_document": "Backlyst_Marketplace_Algorithm_Implementation_Plan.docx.pdf",
+    "source_section": "5. Detailed Step-by-Step Implementation Plan (Step 12)",
+    "requirement": "Exposure Penalty: Penalize repeated display. Apply soft penalties. Return penalized valid results rather than empty if caps remove all.",
+    "hard_or_soft_rule": "soft",
+    "implementation_status": "NOT_IMPLEMENTED",
+    "severity": "P2",
+    "confidence": "HIGH",
+    "repository_evidence": [
+      "N/A"
+    ],
+    "runtime_entry_point": "N/A",
+    "runtime_call_chain": [],
+    "data_models": [],
+    "module_registration": [],
+    "authorization_evidence": [],
+    "transaction_evidence": [],
+    "test_evidence": [
+      "No automated test found"
+    ],
+    "command_evidence": [],
+    "gap_summary": "Exposure Penalty based on OpportunityImpression logs is missing.",
+    "recommended_action": "Implement Exposure Penalty in ScoringUtils using OpportunityImpression.",
+    "dependencies": []
+  },
+  {
+    "requirement_id": "IP-014",
+    "source_document": "Backlyst_Marketplace_Algorithm_Implementation_Plan.docx.pdf",
+    "source_section": "5. Detailed Step-by-Step Implementation Plan (Step 13)",
+    "requirement": "Risk Penalty / Suppression: Use dispute rate, rejection, abuse, override. Suppressed excluded unless explicitly force-matched.",
+    "hard_or_soft_rule": "hard",
+    "implementation_status": "IMPLEMENTED",
+    "severity": "P0",
+    "confidence": "HIGH",
+    "repository_evidence": [
+      "src/modules/task/market-algoritm/risk.engine.ts"
+    ],
+    "runtime_entry_point": "RiskEngine.calculateRiskScore()",
+    "runtime_call_chain": [],
+    "data_models": [],
+    "module_registration": [],
+    "authorization_evidence": [],
+    "transaction_evidence": [],
+    "test_evidence": [
+      "No automated test found"
+    ],
+    "command_evidence": [],
+    "gap_summary": "None",
+    "recommended_action": "None",
+    "dependencies": []
+  },
+  {
+    "requirement_id": "IP-015",
+    "source_document": "Backlyst_Marketplace_Algorithm_Implementation_Plan.docx.pdf",
+    "source_section": "5. Detailed Step-by-Step Implementation Plan (Step 14)",
+    "requirement": "Final Ranking Formula: Combine components with configurable weights from MarketplaceScoringConfig. Sort descending. Breakdown only in debug.",
+    "hard_or_soft_rule": "soft",
+    "implementation_status": "IMPLEMENTED",
+    "severity": "P2",
+    "confidence": "HIGH",
+    "repository_evidence": [
+      "src/modules/task/market-algoritm/scoring.utils.ts",
+      "prisma/schema/marketplace.prisma:201 (MarketplaceScoringConfig)"
+    ],
+    "runtime_entry_point": "ScoringUtils.calculateFinalScore()",
+    "runtime_call_chain": [],
+    "data_models": [],
+    "module_registration": [],
+    "authorization_evidence": [],
+    "transaction_evidence": [],
+    "test_evidence": [
+      "src/modules/task/market-algoritm/scoring.utils.spec.ts: marketplace scoring utils (unit) - PASS"
+    ],
+    "command_evidence": [],
+    "gap_summary": "None",
+    "recommended_action": "None",
+    "dependencies": []
+  },
+  {
+    "requirement_id": "IP-016",
+    "source_document": "Backlyst_Marketplace_Algorithm_Implementation_Plan.docx.pdf",
+    "source_section": "9. Admin Configuration and Override Layer",
+    "requirement": "Scoring Config API (GET/PATCH) for weights/thresholds. Override API (POST/GET/PATCH/DELETE) for boost, suppression, force-match, requires reasonCode.",
+    "hard_or_soft_rule": "hard",
+    "implementation_status": "IMPLEMENTED",
+    "severity": "P0",
+    "confidence": "HIGH",
+    "repository_evidence": [
+      "src/modules/task/market-algoritm/marketplace-config.service.ts",
+      "src/modules/task/market-algoritm/marketplace-override.service.ts"
+    ],
+    "runtime_entry_point": "MarketplaceConfigService.updateConfig()",
+    "runtime_call_chain": [],
+    "data_models": [],
+    "module_registration": [],
+    "authorization_evidence": [],
+    "transaction_evidence": [],
+    "test_evidence": [
+      "No automated test found"
+    ],
+    "command_evidence": [],
+    "gap_summary": "None",
+    "recommended_action": "None",
+    "dependencies": []
+  },
+  {
+    "requirement_id": "IP-017",
+    "source_document": "Backlyst_Marketplace_Algorithm_Implementation_Plan.docx.pdf",
+    "source_section": "6. Provider Opportunity API Runtime Flow",
+    "requirement": "GET /provider-task/opportunities. Authenticate -> validate ACTIVE -> verify ownership -> hard filters -> relaxation -> score -> sort -> paginate -> log impression.",
+    "hard_or_soft_rule": "hard",
+    "implementation_status": "PARTIALLY_IMPLEMENTED",
+    "severity": "P0",
+    "confidence": "HIGH",
+    "repository_evidence": [
+      "src/modules/task/market-algoritm/ranking.service.ts"
+    ],
+    "runtime_entry_point": "RankingService.rank()",
+    "runtime_call_chain": [],
+    "data_models": [],
+    "module_registration": [],
+    "authorization_evidence": [],
+    "transaction_evidence": [],
+    "test_evidence": [
+      "src/modules/task/market-algoritm/ranking.service.spec.ts: RankingService — T6 marketplace status semantics (spec §7) (unit) - PASS"
+    ],
+    "command_evidence": [],
+    "gap_summary": "GET /provider-task/opportunities flow handles scoring and sorting but misses impression logging.",
+    "recommended_action": "Add OpportunityImpression logging to the Opportunity API.",
+    "dependencies": []
+  },
+  {
+    "requirement_id": "IP-018",
+    "source_document": "Backlyst_Marketplace_Algorithm_Implementation_Plan.docx.pdf",
+    "source_section": "3. Final Marketplace Algorithm Path (Step 18)",
+    "requirement": "Opportunity Impression Logging: Log shown tasks for exposure balancing and analytics.",
+    "hard_or_soft_rule": "hard",
+    "implementation_status": "PARTIALLY_IMPLEMENTED",
+    "severity": "P0",
+    "confidence": "HIGH",
+    "repository_evidence": [
+      "src/modules/task/market-algoritm/impression.service.ts"
+    ],
+    "runtime_entry_point": "ImpressionService.logImpressions()",
+    "runtime_call_chain": [],
+    "data_models": [],
+    "module_registration": [],
+    "authorization_evidence": [],
+    "transaction_evidence": [],
+    "test_evidence": [
+      "No automated test found"
+    ],
+    "command_evidence": [],
+    "gap_summary": "ImpressionService exists but is not called when returning ranked tasks in Opportunity API.",
+    "recommended_action": "Call ImpressionService.logImpressions() in Opportunity API.",
+    "dependencies": []
+  },
+  {
+    "requirement_id": "IP-019",
+    "source_document": "Backlyst_Marketplace_Algorithm_Implementation_Plan.docx.pdf",
+    "source_section": "3. Final Marketplace Algorithm Path (Step 19)",
+    "requirement": "Task Event Score Hooks: Update matching profiles after apply, select, approve, dispute, cancel events.",
+    "hard_or_soft_rule": "both",
+    "implementation_status": "PARTIALLY_IMPLEMENTED",
+    "severity": "P1",
+    "confidence": "HIGH",
+    "repository_evidence": [
+      "src/modules/task/market-algoritm/scoring.service.ts"
+    ],
+    "runtime_entry_point": "ScoringService.updateScoresAfterTask()",
+    "runtime_call_chain": [],
+    "data_models": [],
+    "module_registration": [],
+    "authorization_evidence": [],
+    "transaction_evidence": [],
+    "test_evidence": [
+      "No automated test found"
+    ],
+    "command_evidence": [],
+    "gap_summary": "Hooks exist for task completion but not for select, apply, or dispute events.",
+    "recommended_action": "Add event listeners for apply, select, and dispute events to update matching profiles.",
+    "dependencies": []
+  },
+  {
+    "requirement_id": "IP-020",
+    "source_document": "Backlyst_Marketplace_Algorithm_Implementation_Plan.docx.pdf",
+    "source_section": "10. BullMQ Marketplace Maintenance Jobs",
+    "requirement": "BullMQ jobs: decay-boost-factors, expire-overrides, cleanup-impressions, flag-neglected-websites, update-opportunity-scores.",
+    "hard_or_soft_rule": "hard",
+    "implementation_status": "PARTIALLY_IMPLEMENTED",
+    "severity": "P0",
+    "confidence": "HIGH",
+    "repository_evidence": [
+      "src/bullmq/constants/queue.constants.ts:40 (MARKETPLACE_MAINTENANCE_JOB_NAMES)",
+      "src/modules/task/marketplace-maintenance/marketplace-maintenance.worker.ts"
+    ],
+    "runtime_entry_point": "MarketplaceMaintenanceWorker.process()",
+    "runtime_call_chain": [],
+    "data_models": [],
+    "module_registration": [],
+    "authorization_evidence": [],
+    "transaction_evidence": [],
+    "test_evidence": [
+      "No automated test found"
+    ],
+    "command_evidence": [],
+    "gap_summary": "BullMQ jobs are registered but logic inside the worker for decay, expiration, and cleanup is empty/stubbed.",
+    "recommended_action": "Implement the handlers for maintenance jobs in MarketplaceMaintenanceWorker.",
+    "dependencies": []
+  },
+  {
+    "requirement_id": "IP-021",
+    "source_document": "Backlyst_Marketplace_Algorithm_Implementation_Plan.docx.pdf",
+    "source_section": "11. Validation Rules and Safety Boundaries",
+    "requirement": "Scores clamped 0-100. Boost factor min/max. Quality rating 1-5. Users do not see internal score breakdown.",
+    "hard_or_soft_rule": "hard",
+    "implementation_status": "IMPLEMENTED",
+    "severity": "P0",
+    "confidence": "HIGH",
+    "repository_evidence": [
+      "src/modules/task/market-algoritm/scoring.utils.ts",
+      "src/modules/task/market-algoritm/boost.service.ts"
+    ],
+    "runtime_entry_point": "ScoringUtils.calculateFinalScore()",
+    "runtime_call_chain": [],
+    "data_models": [],
+    "module_registration": [],
+    "authorization_evidence": [],
+    "transaction_evidence": [],
+    "test_evidence": [
+      "src/modules/task/market-algoritm/scoring.utils.spec.ts: marketplace scoring utils (unit) - PASS"
+    ],
+    "command_evidence": [],
+    "gap_summary": "None",
+    "recommended_action": "None",
+    "dependencies": []
+  }
+]

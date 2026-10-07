@@ -1,0 +1,10 @@
+# ==============================================================================
+# Code Owners Configuration
+# Requires mandatory review and approval before merging into protected branches
+# ==============================================================================
+
+# Every file in the repository can be reviewed by Backlyst or @devlopersabbir
+* @Backlyst @devlopersabbir
+
+# Only Backlyst can approve changes to the CODEOWNERS file itself
+/.github/CODEOWNERS @Backlyst
