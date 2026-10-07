@@ -1,0 +1,46 @@
+requirement_id,source_document,source_section,requirement,hard_or_soft_rule,repository_evidence,runtime_entry_point,implementation_status,confidence,test_evidence,severity,gap_summary,recommended_action
+MC-001,Marketplace Control,2,"Store source, target, timestamp, interaction_id, niches",Hard,"prisma/schema/marketplace.prisma: DomainRelationshipEvent","domain-interaction-recorder.service.ts",IMPLEMENTED,HIGH,yes,P0,None,None
+MC-002,Marketplace Control,4,"Reciprocal control early: 60-90, scaling: 120",Hard,"prisma/schema/marketplace.prisma: MarketplaceScoringConfig","validation.engine.ts",IMPLEMENTED,HIGH,yes,P0,None,None
+MC-003,Marketplace Control,5,"Repeat pair cooldown early: 60-90, scaling: 90",Hard,"prisma/schema/marketplace.prisma: MarketplaceScoringConfig","validation.engine.ts",IMPLEMENTED,HIGH,yes,P0,None,None
+MC-004,Marketplace Control,6,"Reduce repeated pairings, prioritise not recently used",Soft,"scoring.service.ts, ranking.service.ts","ranking.service.ts",IMPLEMENTED,HIGH,yes,P1,None,None
+MC-005,Marketplace Control,7,"Max 40% same niche, min 60% adjacent",Hard,"ranking.service.ts: nicheConcentrationMultiplier","ranking.service.ts",INCORRECT_IMPLEMENTATION,HIGH,yes,P0,"Implemented as soft multiplier instead of hard limit","Refactor validation engine to enforce hard niche distribution limit"
+MC-006,Marketplace Control,8,"Interaction velocity control: limits per phase",Hard,"prisma/schema/marketplace.prisma: WebsiteMatchingProfile.weeklyInteractionLimit","validation.engine.ts",PARTIALLY_IMPLEMENTED,HIGH,yes,P0,"Limits exist but lack strict transactional locking under concurrency","Wrap validation and increment in serializable transaction"
+MC-007,Marketplace Control,9,"Pattern monitoring: repeat, reciprocal, concentration",Soft,"pattern-monitor.service.ts","pattern-monitor.cron.ts",IMPLEMENTED,HIGH,yes,P1,None,None
+MC-008,Marketplace Control,10,"Risk/concentration scoring",Soft,"risk.engine.ts","ranking.service.ts",IMPLEMENTED,HIGH,yes,P1,None,None
+MC-009,Marketplace Control,11,"System controls final match assignment, users cannot select unrestricted",Hard,"matching.engine.ts","matching.engine.ts",IMPLEMENTED,HIGH,yes,P0,None,None
+MC-010,Marketplace Control,12,"System must validate rules before approval",Hard,"validation.engine.ts","validation.engine.ts",IMPLEMENTED,HIGH,yes,P0,None,None
+MC-011,Marketplace Control,13,"Tier system limits",Hard,"tier-engine.service.ts","ranking.service.ts",IMPLEMENTED,HIGH,yes,P1,None,None
+MC-012,Marketplace Control,14,"Tier enforcement rules (max 5 absolute)",Hard,"tier-engine.service.ts","validation.engine.ts",IMPLEMENTED,HIGH,yes,P1,None,None
+MC-013,Marketplace Control,15,"Limit enforcement priority (validation > tier > constraints)",Hard,"validation.engine.ts","validation.engine.ts",IMPLEMENTED,HIGH,yes,P1,None,None
+MC-014,Marketplace Control,16,"Admin controls for overrides",Hard,"marketplace-override.service.ts","marketplace-override.service.ts",PARTIALLY_IMPLEMENTED,HIGH,yes,P1,"Overrides exist but central audit log is incomplete","Implement comprehensive audit logging for overrides"
+MC-015,Marketplace Control,17,"Early-stage mode support",Hard,"prisma/schema/marketplace.prisma: MarketplaceModeConfig","ranking.service.ts",IMPLEMENTED,HIGH,yes,P1,None,None
+MC-016,Marketplace Control,18,"Scaling mode support",Hard,"prisma/schema/marketplace.prisma: MarketplaceModeConfig","ranking.service.ts",IMPLEMENTED,HIGH,yes,P1,None,None
+MC-017,Marketplace Control,19,"Hide restricted or blocked domains",Hard,"ranking.service.ts","ranking.service.ts",IMPLEMENTED,HIGH,yes,P0,None,None
+MC-018,Marketplace Control,20,"Enforced server-side",Hard,"ranking.service.ts, validation.engine.ts","matching.engine.ts",IMPLEMENTED,HIGH,yes,P0,None,None
+QC-001,Quality Control,3,"Add status field (Active, Low Priority, etc)",Hard,"prisma/schema/marketplace.prisma: WebsiteMarketplaceStatus","website-status-query.service.ts",IMPLEMENTED,HIGH,yes,P1,None,None
+QC-002,Quality Control,4,"Internal priority score (background only)",Hard,"prisma/schema/marketplace.prisma: WebsiteMatchingProfile.internalPriorityScore","ranking.service.ts",IMPLEMENTED,HIGH,yes,P1,None,None
+QC-003,Quality Control,5,"Visibility control (non-destructive)",Soft,"ranking.service.ts: visibilityScore","ranking.service.ts",IMPLEMENTED,HIGH,yes,P1,None,None
+QC-004,Quality Control,6,"Matching logic extensions (Behaviour/Risk)",Soft,"ranking.service.ts","ranking.service.ts",IMPLEMENTED,HIGH,yes,P1,None,None
+QC-005,Quality Control,7,"Low quality handling (reduce freq/vis, no hard blocks)",Soft,"scoring.service.ts","scoring.service.ts",IMPLEMENTED,HIGH,yes,P1,None,None
+QC-006,Quality Control,8,"Low-pool mode (light adjustment only)",Soft,"matching-relaxation.engine.ts","matching-relaxation.engine.ts",IMPLEMENTED,HIGH,yes,P1,None,None
+QC-007,Quality Control,9,"Multi-domain control (account level)",Soft,"analytics.engine.ts","analytics.engine.ts",PARTIALLY_IMPLEMENTED,HIGH,no,P1,"Lacks full cross-domain concentration penalty logic","Enhance multi-domain tracking in pattern monitor"
+QC-008,Quality Control,10,"Admin controls (extension)",Hard,"admin-website-status.service.ts","admin-website-status.service.ts",IMPLEMENTED,HIGH,yes,P1,None,None
+QC-009,Quality Control,11,"User experience safety (no system errors)",Hard,"matching-relaxation.engine.ts","matching-relaxation.engine.ts",IMPLEMENTED,HIGH,yes,P1,None,None
+QC-010,Quality Control,12,"Final principle (no structural rebuild)",Hard,"market-algoritm/","market-algoritm/",IMPLEMENTED,HIGH,yes,P2,None,None
+IP-001,Implementation Plan,3,"Step 1: Foundation Schema",Hard,"prisma/schema/marketplace.prisma","prisma",IMPLEMENTED,HIGH,yes,P0,None,None
+IP-002,Implementation Plan,3,"Step 2: Replace UserMatchingProfile",Hard,"prisma/schema/marketplace.prisma","scoring.service.ts",IMPLEMENTED,HIGH,yes,P0,None,None
+IP-003,Implementation Plan,3,"Step 3: Taxonomy / Categories / Tags",Hard,"None","None",NOT_IMPLEMENTED,HIGH,no,P0,"Missing MarketplaceCategory and MarketplaceTag schema and logic","Add schema and wire APIs"
+IP-004,Implementation Plan,3,"Step 4: Hard Eligibility Filters",Hard,"matching.engine.ts","matching.engine.ts",PARTIALLY_IMPLEMENTED,HIGH,yes,P0,"Verification filter lacks checks for some legacy assignment paths","Audit all endpoints that assign tasks to ensure verification checks"
+IP-005,Implementation Plan,3,"Step 5: Candidate Pool Selection",Hard,"matching-relaxation.engine.ts","matching-relaxation.engine.ts",IMPLEMENTED,HIGH,yes,P0,None,None
+IP-006,Implementation Plan,3,"Step 6: Dynamic Relaxation Engine",Hard,"matching-relaxation.engine.ts","matching-relaxation.engine.ts",IMPLEMENTED,HIGH,yes,P0,None,None
+IP-007,Implementation Plan,3,"Step 7-10: Score Components",Hard,"scoring.utils.ts","scoring.service.ts",IMPLEMENTED,HIGH,yes,P0,None,None
+IP-008,Implementation Plan,3,"Step 11-13: Boost and Penalties",Hard,"scoring.service.ts","scoring.service.ts",IMPLEMENTED,HIGH,yes,P0,None,None
+IP-009,Implementation Plan,3,"Step 14: Final Ranking Formula",Hard,"ranking.service.ts","ranking.service.ts",IMPLEMENTED,HIGH,yes,P0,None,None
+IP-010,Implementation Plan,3,"Step 15-16: Admin scoring config and overrides",Hard,"marketplace-config.service.ts","marketplace-config.service.ts",IMPLEMENTED,HIGH,yes,P1,None,None
+IP-011,Implementation Plan,3,"Step 17-18: GET provider opportunities API & impressions",Hard,"impression.service.ts","impression.service.ts",IMPLEMENTED,HIGH,yes,P1,None,None
+IP-012,Implementation Plan,3,"Step 19: Task Event Score Hooks",Hard,"scoring.service.ts","scoring.service.ts",PARTIALLY_IMPLEMENTED,HIGH,yes,P0,"Hooks exist but not fully integrated into all task state transitions","Wire hooks into all state transitions"
+IP-013,Implementation Plan,3,"Step 20: BullMQ Maintenance Jobs",Hard,"*.cron.ts","*.cron.ts",PARTIALLY_IMPLEMENTED,HIGH,no,P1,"Uses NestJS cron instead of BullMQ","Migrate all marketplace crons to BullMQ"
+IP-014,Implementation Plan,3,"Step 21: No-Empty Fail-Safe",Hard,"matching-relaxation.engine.ts","matching-relaxation.engine.ts",IMPLEMENTED,HIGH,yes,P1,None,None
+IP-015,Implementation Plan,3,"Step 22: Admin Marketplace Monitoring",Hard,"admin-dashboard.service.ts","admin-dashboard.service.ts",PARTIALLY_IMPLEMENTED,HIGH,no,P2,"Basic counts exist, lacks full neglected website views","Implement admin views for neglected and overexposed websites"
+CR-001,Cross-document,1,"Quality Priority vs Scoring Weight Conflict",Soft,"ranking.service.ts","ranking.service.ts",CONFLICTING_REQUIREMENT,HIGH,yes,P2,"Applies both static multiplier and linear weight, causing double penalty","Resolve product rule for priority vs multiplier"
+CR-002,Cross-document,2,"Niche Distribution Hard vs Soft",Hard,"ranking.service.ts","ranking.service.ts",CONFLICTING_REQUIREMENT,HIGH,yes,P0,"Hard max 40% vs soft prioritisation","Implement strict 40% cap in validation engine"

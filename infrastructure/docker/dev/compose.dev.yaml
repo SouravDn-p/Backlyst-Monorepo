@@ -1,0 +1,60 @@
+# ==============================================================================
+# Backlyst - Docker Compose Build File (DEV)
+# Used by GitHub Actions CI/CD to BUILD Docker images from source code
+# ==============================================================================
+# NOTE: This is NOT the same as docker-compose.backend.yaml / docker-compose.frontend.yaml
+#       Those files are for RUNNING containers on EC2 instances from ECR images.
+#       This file is for BUILDING images from source code in CI/CD pipelines.
+
+services:
+  # Backend Service
+  backend:
+    image: ghcr.io/backlyst/backlystapp-backend:dev
+    container_name: backlystapp-backend-dev
+    build:
+      context: ../../../backend
+      dockerfile: Dockerfile
+    restart: always
+    profiles: [prod, dev, backend]
+    ports:
+      - "8081:8081"
+    env_file:
+      - .env
+    environment:
+      - DATABASE_URL=postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@postgres:5432/${POSTGRES_DB:-mydb}?schema=public
+    networks:
+      - backlystapp
+
+  # Frontend Service
+  frontend:
+    image: ghcr.io/backlyst/backlystapp-frontend:dev
+    container_name: backlystapp-frontend-dev
+    build:
+      context: ../../../frontend
+      dockerfile: Dockerfile
+    restart: always
+    profiles: [prod, dev, frontend]
+    ports:
+      - "3003:3003"
+    depends_on:
+      - backend
+    networks:
+      - backlystapp
+
+  # Admin Dashboard Service
+  dashboard:
+    image: ghcr.io/backlyst/backlystapp-dashboard:dev
+    container_name: backlystapp-dashboard-dev
+    build:
+      context: ../../../admin-dashboard
+      dockerfile: Dockerfile
+    restart: always
+    profiles: [prod, dev, dashboard]
+    ports:
+      - "3043:3043"
+    networks:
+      - backlystapp
+
+networks:
+  backlystapp:
+    driver: bridge

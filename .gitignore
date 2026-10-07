@@ -1,0 +1,45 @@
+node_modules
+.env
+.env.json
+infrastructure/helm
+
+# Kubernetes & Docs
+infrastructure/k8s
+infrastructure/*.docx
+infrastructure/*.doc
+
+# Terraform Recommended Ignores
+# Local .terraform directories
+**/.terraform/
+
+# Terraform State files & Plans
+*.tfstate
+*.tfstate.*
+*.tfstate.backup
+*.tfplan
+
+# Crash & debug logs
+crash.log
+crash.*.log
+
+# Ignore all variable files containing sensitive data (except examples)
+*.tfvars
+*.tfvars.json
+!*.tfvars.example
+!*.example.tfvars
+
+# Local overrides
+override.tf
+override.tf.json
+*_override.tf
+*_override.tf.json
+
+# CLI configuration files
+.terraformrc
+terraform.rc
+
+# Provider lock file (Uncomment if you want to commit it per HashiCorp best practice)
+.terraform.lock.hcl
+branch_structure.json
+temp_auto_push.bat
+temp_interactive_push.bat

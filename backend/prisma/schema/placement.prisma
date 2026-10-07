@@ -1,0 +1,407 @@
+model PlacementTask {
+  id                        String  @id @default(uuid())
+  requesterId               String
+  requesterWebsiteId        String
+  selectedProviderId        String?
+  selectedApplicationId     String?
+  assignedProviderWebsiteId String?
+
+  projectTitle         String
+  targetUrl            String
+  anchorText           String
+  placementGuidelines  String?
+  requiredDomainRating Int?
+  country              String?
+  language             String?
+
+  placementType             PlacementType
+  linkAttribute             LinkAttribute
+  responsibilityType        ResponsibilityType?
+  requestedDeadlineDays     Int
+  deliveryDeadline          DateTime?
+  deadlineExtensionCount    Int                 @default(0)
+  deadlineExtendedDaysTotal Int                 @default(0)
+  deadlineLastExtendedAt    DateTime?
+  isLate                    Boolean             @default(false)
+  lateAt                    DateTime?
+
+  lifecycleStatus  TaskStatus       @default(DRAFT)
+  submissionStatus SubmissionStatus @default(NOT_SUBMITTED)
+
+  creditCost                Int
+  reservedCreditAmount      Int
+  walletType                CreditWalletType
+  finalTaskType             PlacementFinalTaskType?
+  finalCreditCost           Int?
+  providerRewardCredits     Int?
+  completionRewardedAt      DateTime?
+  cancellationRequestStatus CancellationRequestStatus @default(NONE)
+  cancellationRequestedById String?
+  cancellationRequestedAt   DateTime?
+  cancellationRespondedAt   DateTime?
+
+  publishedAt DateTime?
+  assignedAt  DateTime?
+  submittedAt DateTime?
+  approvedAt  DateTime?
+  completedAt DateTime?
+  cancelledAt DateTime?
+  expiredAt   DateTime?
+  frozenAt    DateTime?
+
+  requester                  User                        @relation("RequesterPlacementTasks", fields: [requesterId], references: [id])
+  selectedProvider           User?                       @relation("SelectedProviderTasks", fields: [selectedProviderId], references: [id])
+  opportunityImpressions     OpportunityImpression[]
+  placementApplications      PlacementApplication[]
+  taskFlows                  TaskFlow[]
+  deadlineExtensions         TaskDeadlineExtension[]
+  mozAnalyticsHistories      TaskMozAnalyticsHistory[]
+  creditLogs                 CreditLog[]                 @relation("PlacementTaskCreditLogs")
+  manualMatchQueueEntries    ManualMatchQueue[]
+  weeklyContributionTriggers WebsiteWeeklyContribution[] @relation("WeeklyContributionTriggerTask")
+  verifiedPlacement          WebsiteVerifiedPlacement?   @relation("TaskVerifiedPlacement")
+  rewardLedgerEntries        RewardLedger[]
+  messages                   Message[]
+  directTaskRequest          DirectTaskRequest?          @relation("DirectRequestCreatedTask")
+
+  marketplaceCategories TaskMarketplaceCategory[]
+  marketplaceTags       TaskMarketplaceTag[]
+
+  supportDocuments       String[]
+  providerProofDocuments String[] @default([])
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([requesterId])
+  @@index([selectedProviderId])
+  @@index([assignedProviderWebsiteId])
+  @@index([lifecycleStatus])
+  @@index([deliveryDeadline])
+  @@index([country])
+  @@index([language])
+  @@index([lifecycleStatus, placementType])
+  @@index([lifecycleStatus, createdAt])
+  @@index([requesterWebsiteId, lifecycleStatus])
+}
+
+model TaskMozAnalyticsHistory {
+  id String @id @default(uuid())
+
+  placementTaskId String
+  subject         String
+  date            DateTime @default(now())
+  data            Json
+
+  placementTask PlacementTask @relation(fields: [placementTaskId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([placementTaskId])
+  @@index([subject])
+  @@index([date])
+}
+
+model PlacementApplication {
+  id                String     @id @default(uuid())
+  providerId        String
+  providerWebsiteId String
+  placementTaskId   String
+  status            TaskStatus @default(APPLIED)
+
+  provider      User          @relation("ProviderPlacementApplications", fields: [providerId], references: [id])
+  placementTask PlacementTask @relation(fields: [placementTaskId], references: [id])
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([providerId, placementTaskId])
+  @@index([providerId])
+  @@index([providerWebsiteId])
+  @@index([placementTaskId])
+}
+
+model WebsiteWeeklyContribution {
+  id String @id @default(cuid())
+
+  userId    String
+  websiteId String
+
+  triggerTaskId String?
+
+  weekStartAt DateTime
+  weekEndAt   DateTime
+
+  verifiedPlacementCount Int @default(1)
+
+  rewardCredits Int                      @default(1)
+  status        WeeklyContributionStatus @default(VERIFIED)
+
+  rewardedAt   DateTime  @default(now())
+  revokedAt    DateTime?
+  revokeReason String?
+
+  user        User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  website     Website        @relation(fields: [websiteId], references: [id], onDelete: Cascade)
+  triggerTask PlacementTask? @relation("WeeklyContributionTriggerTask", fields: [triggerTaskId], references: [id], onDelete: SetNull)
+
+  @@unique([websiteId, weekStartAt])
+  @@index([userId])
+  @@index([websiteId])
+  @@index([weekStartAt])
+  @@index([status])
+}
+
+model WebsiteMilestoneProgress {
+  id String @id @default(cuid())
+
+  websiteId String @unique
+
+  totalVerifiedPlacements Int       @default(0)
+  lastMilestoneAtCount    Int       @default(0)
+  lastVerifiedPlacementAt DateTime?
+
+  website Website @relation(fields: [websiteId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+enum PlacementFinalTaskType {
+  BACKLINK
+  GUEST_POST
+}
+
+enum WeeklyContributionStatus {
+  VERIFIED
+  REVOKED
+}
+
+enum VerifiedPlacementStatus {
+  VERIFIED
+  REVOKED
+}
+
+enum WebsiteStreakStatus {
+  ACTIVE
+  AT_RISK
+  BROKEN
+}
+
+enum DeadlineExtensionStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+model WebsiteVerifiedPlacement {
+  id String @id @default(cuid())
+
+  userId    String
+  websiteId String
+  taskId    String @unique
+
+  finalTaskType PlacementFinalTaskType
+  status        VerifiedPlacementStatus @default(VERIFIED)
+  verifiedAt    DateTime                @default(now())
+
+  revokedAt    DateTime?
+  revokeReason String?
+
+  user    User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  website Website       @relation(fields: [websiteId], references: [id], onDelete: Cascade)
+  task    PlacementTask @relation("TaskVerifiedPlacement", fields: [taskId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId])
+  @@index([websiteId])
+  @@index([status])
+  @@index([verifiedAt])
+}
+
+model WebsiteActivityStreak {
+  id String @id @default(cuid())
+
+  websiteId String @unique
+  userId    String
+
+  currentStreakWeeks Int @default(0)
+  longestStreakWeeks Int @default(0)
+
+  status WebsiteStreakStatus @default(BROKEN)
+
+  streakStartedWeekStart DateTime?
+  lastActiveWeekStart    DateTime?
+  lastActiveWeekEnd      DateTime?
+
+  lastVerifiedPlacementAt DateTime?
+
+  brokenAt      DateTime?
+  lastCheckedAt DateTime?
+
+  website Website @relation(fields: [websiteId], references: [id], onDelete: Cascade)
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId])
+  @@index([websiteId])
+  @@index([status])
+  @@index([lastActiveWeekStart])
+}
+
+enum TaskFlowEventType {
+  TASK_CREATED
+  TASK_PUBLISHED
+  REQUESTED_DEADLINE_UPDATED
+  PROVIDER_APPLIED
+  PROVIDER_SELECTED
+  APPLICATION_REJECTED
+  PROVIDER_PROOF_UPLOADED
+  WORK_STARTED
+  WORK_SUBMITTED
+  WORK_RESUBMITTED
+  CANCELLATION_REQUESTED
+  CANCELLATION_ACCEPTED
+  CANCELLATION_REJECTED
+  REVISION_REQUESTED
+  TASK_APPROVED
+  TASK_COMPLETED
+  TASK_REJECTED
+  TASK_CANCELLED
+  TASK_DISPUTED
+  TASK_FROZEN
+  DEADLINE_EXTENDED
+  ADMIN_STATUS_OVERRIDE
+  ADMIN_CREDIT_ADJUSTED
+  ADMIN_ABUSE_PATTERN_FLAGGED
+  SYSTEM_AUTO_FAILED
+}
+
+enum TaskFlowActorRole {
+  REQUESTER
+  PROVIDER
+  ADMIN
+  SYSTEM
+}
+
+model TaskFlow {
+  id String @id @default(uuid())
+
+  placementTaskId    String
+  requesterId        String
+  providerId         String?
+  actorId            String
+  requesterWebsiteId String?
+  providerWebsiteId  String?
+  eventType          TaskFlowEventType?
+  actorRole          TaskFlowActorRole?
+
+  fromStatus  TaskStatus?
+  toStatus    TaskStatus
+  actionTaken String?
+  note        String?
+  metadata    Json?
+  eventKey    String?     @unique
+
+  placementTask PlacementTask @relation(fields: [placementTaskId], references: [id])
+
+  requester User  @relation("TaskFlowRequester", fields: [requesterId], references: [id])
+  provider  User? @relation("TaskFlowProvider", fields: [providerId], references: [id])
+  actor     User  @relation("TaskFlowActor", fields: [actorId], references: [id])
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([placementTaskId])
+  @@index([requesterId])
+  @@index([providerId])
+  @@index([actorId])
+  @@index([requesterWebsiteId])
+  @@index([providerWebsiteId])
+  @@index([eventType])
+  @@index([actorRole])
+  @@index([eventKey])
+}
+
+model TaskDeadlineExtension {
+  id String @id @default(uuid())
+
+  placementTaskId  String
+  requestedById    String
+  respondedById    String?
+  previousDeadline DateTime?
+  newDeadline      DateTime
+  extendDays       Int
+  reason           String?
+  responseNote     String?
+  status           DeadlineExtensionStatus @default(PENDING)
+
+  createdAt   DateTime  @default(now())
+  respondedAt DateTime?
+
+  placementTask PlacementTask @relation(fields: [placementTaskId], references: [id])
+  requestedBy   User          @relation("RequestedDeadlineExtensions", fields: [requestedById], references: [id])
+  respondedBy   User?         @relation("RespondedDeadlineExtensions", fields: [respondedById], references: [id])
+
+  @@index([placementTaskId])
+  @@index([requestedById])
+  @@index([respondedById])
+  @@index([status])
+}
+
+enum DirectTaskRequestStatus {
+  PENDING
+  ACCEPTED
+  REJECTED
+  CANCELLED
+  EXPIRED
+}
+
+model DirectTaskRequest {
+  id                 String @id @default(uuid())
+  requesterId        String
+  requesterWebsiteId String
+  targetProviderId   String
+
+  projectTitle String
+  targetUrl             String
+  anchorText            String
+  placementGuidelines   String?
+  requiredDomainRating  Int?
+  placementType         PlacementType
+  linkAttribute         LinkAttribute
+  requestedDeadlineDays Int
+
+  creditCost           Int
+  reservedCreditAmount Int
+  walletType           CreditWalletType
+
+  status             DirectTaskRequestStatus @default(PENDING)
+  createdTaskId      String?                 @unique
+  rejectionReason    String?
+  cancellationReason String?
+
+  expiresAt   DateTime?
+  respondedAt DateTime?
+  cancelledAt DateTime?
+
+  supportDocuments String[]
+
+  requester      User           @relation("RequesterDirectRequestsSent", fields: [requesterId], references: [id], onDelete: Cascade)
+  targetProvider User           @relation("ProviderDirectRequestsReceived", fields: [targetProviderId], references: [id], onDelete: Cascade)
+  createdTask    PlacementTask? @relation("DirectRequestCreatedTask", fields: [createdTaskId], references: [id], onDelete: SetNull)
+  creditLogs     CreditLog[]    @relation("DirectTaskRequestCreditLogs")
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([requesterId])
+  @@index([targetProviderId])
+  @@index([status])
+}
+
